@@ -17,6 +17,10 @@ static void handle_data_events(client_t *client)
 {
 }
 
+static void ftp_client_cleanup(client_t *client)
+{
+}
+
 static void handle_control_events(client_t *client)
 {
   int nread;
@@ -26,6 +30,15 @@ static void handle_control_events(client_t *client)
 
   nread = network_read_buffer(client->fd, client->input_buffer);
 
+  /* client has no more bytes to read */
+  if(nread == -EAGAIN)
+    return;
+  /* something went wrong with the connection */
+  if(nread <= 0)
+  {
+    ftp_client_cleanup(client);
+    return;
+  }
 }
 
 static void handle_client(client_t *client)

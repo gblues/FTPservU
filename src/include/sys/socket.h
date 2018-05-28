@@ -31,6 +31,7 @@ extern "C" {
 
 #define EWOULDBLOCK SO_EWOULDBLOCK
 #define EAGAIN SO_EWOULDBLOCK
+#define ENOBUFS 105 /* No buffer space available */
 
 typedef uint32_t socklen_t;
 typedef uint16_t sa_family_t;

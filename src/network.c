@@ -92,6 +92,9 @@ int network_read_buffer(int socket, io_buffer_t *buffer)
   int nread;
   int errno;
 
+  if( iobuffer_remaining(buffer) == 0)
+    return -ENOBUFS;
+
   nread = recv(socket, iobuffer_head(buffer), iobuffer_remaining(buffer), 0);
   if(nread < 0)
   {
