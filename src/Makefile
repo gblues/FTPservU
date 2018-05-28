@@ -1,6 +1,7 @@
 TARGET := ftpserver
 
-VERBOSE   = 1
+#VERBOSE   = 1
+
 BUILD_DIR = objs
 
 # Set up compiler for DevKitPro toolchain
@@ -73,6 +74,8 @@ TARGETS := $(TARGET).rpx $(TARGET).elf
 
 DEPFLAGS = -MT $@ -MMD -MP -MF $(BUILD_DIR)/$*.depend
 
+ELF2RPL := wut/elf2rpl/elf2rpl
+
 all: $(TARGETS)
 
 %: $(BUILD_DIR)/%
@@ -130,6 +133,7 @@ elf: $(BUILD_DIR)/$(TARGET).elf
 	cp $(BUILD_DIR)/$(TARGET).elf .
 
 rpx: $(BUILD_DIR)/$(TARGET).rpx
+	cp $(BUILD_DIR)/$(TARGET).rpx .
 
 clean:
 	rm -f $(OBJ) $(RPX_OBJ) $(HBL_ELF_OBJ) $(TARGET).elf $(TARGET).rpx.elf $(TARGET).rpx
