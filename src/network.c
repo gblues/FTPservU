@@ -89,5 +89,18 @@ int network_read_buffer(int socket, io_buffer_t *buffer)
   if(socket < 0)
     return socket;
 
-  return 0;
+  int nread;
+  int errno;
+
+  nread = recv(socket, iobuffer_head(buffer), iobuffer_remaining(buffer), 0);
+  if(nread < 0)
+  {
+    errno = socketlasterr();
+    return -errno;
+  }
+
+  buffer->head += nread;
+  memset(iobuffer_head(buffer), 0, iobuffer_remaining(buffer));
+
+  return nread;
 }

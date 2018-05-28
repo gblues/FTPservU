@@ -1,0 +1,5 @@
+/src/objs
+*.elf
+*.rpx
+*.swp
+*.last
