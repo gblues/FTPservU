@@ -21,6 +21,10 @@ static void ftp_client_cleanup(client_t *client)
 {
 }
 
+static void ftp_process_command(client_t *client, uint8_t *command)
+{
+}
+
 static void handle_control_events(client_t *client)
 {
   int nread;
@@ -39,6 +43,11 @@ static void handle_control_events(client_t *client)
     ftp_client_cleanup(client);
     return;
   }
+
+  uint8_t *line;
+
+  while( (line = iobuffer_next_line(client->input_buffer)) != NULL )
+    ftp_process_command(client, line);
 }
 
 static void handle_client(client_t *client)
