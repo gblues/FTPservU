@@ -3,16 +3,17 @@
 
 #include "wiiu/types.h"
 #include "iobuffer.h"
-
-typedef struct buffer buffer_t;
+#include "commands.h"
+#include "ftpservu_types.h"
 
 struct client_struct {
   s32 fd;
   io_buffer_t *input_buffer;
+  bool authenticated;
+  void (*command_processor)(client_t *client, uint8_t *command);
   void *data_connection;
 };
 
-typedef struct client_struct client_t;
 
 int ftp_network_handler(int socket);
 void ftp_deinit(void);

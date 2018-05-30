@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include "network.h"
+#include "iobuffer.h"
 
 static int setup_server_socket(void)
 {

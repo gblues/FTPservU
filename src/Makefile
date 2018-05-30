@@ -37,6 +37,7 @@ OBJ += network.o
 OBJ += ftp.o
 OBJ += input.o
 OBJ += iobuffer.o
+OBJ += commands.o
 OBJ += main.o
 OBJ += hbl.o
 OBJ += fs/sd_fat_devoptab.o
