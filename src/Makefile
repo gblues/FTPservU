@@ -1,4 +1,4 @@
-TARGET := ftpserver
+TARGET := ftpservu
 
 #VERBOSE   = 1
 
@@ -32,7 +32,7 @@ endif
 
 # Object files included in project
 OBJ :=
-OBJ += ftpserver.o
+OBJ += ftpservu.o
 OBJ += network.o
 OBJ += ftp.o
 OBJ += input.o
