@@ -10,10 +10,8 @@ struct client_struct {
   s32 fd;
   io_buffer_t *input_buffer;
   bool authenticated;
-  void (*command_processor)(client_t *client, uint8_t *command);
   void *data_connection;
 };
-
 
 int ftp_network_handler(int socket);
 void ftp_deinit(void);

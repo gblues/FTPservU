@@ -10,6 +10,7 @@
  */
 
 typedef struct client_struct client_t;
+typedef struct command command_t;
 typedef struct io_buffer io_buffer_t;
 typedef void (*accept_cb)(int fd, struct sockaddr_in *sock, socklen_t len);
 

@@ -134,8 +134,6 @@ client_t *new_client(void)
   if(client->input_buffer == NULL)
     goto error;
 
-  client->command_processor = unauthenticated_command_processor;
-
   return client;
 
   error:
