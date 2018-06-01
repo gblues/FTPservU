@@ -1,3 +1,5 @@
+#include <ctype.h>
+
 #include "wiiu/types.h"
 #include "malloc.h"
 
@@ -22,8 +24,59 @@ static void ftp_client_cleanup(client_t *client)
 {
 }
 
+char *get_mnemonic(uint8_t **buffer)
+{
+  char *mnemonic = NULL;
+
+  while(isspace(**buffer))
+    *buffer++;
+
+  if(**buffer == '\0')
+    return NULL;
+
+  mnemonic = *buffer;
+
+  while(**buffer != '\0' && !isspace(**buffer))
+  {
+    if(!isalpha(**buffer))
+      return NULL;
+    *buffer++;
+  }
+
+  /* if there's something after the mnemonic, fast-forward the buffer to the first non-whitespace
+   * character. */
+  if(**buffer != '\0')
+  {
+    **buffer = '\0';
+    *buffer++;
+    while(isspace(**buffer))
+      *buffer++;
+  }
+
+  return mnemonic;
+}
+
+/*
+ * The pointer passed into this function can be freely modified, because it's anchored in
+ * the network buffer and will get cleaned up.
+ */
 static void ftp_process_command(client_t *client, uint8_t *command)
 {
+  int i;
+  char *mnemonic = NULL;
+  char *parameters = NULL;
+
+  /* get_mnemonic automatically fast-forwards command */
+  mnemonic = get_mnemonic(&command);
+  parameters = command;
+
+  if(mnemonic != NULL)
+  {
+    for(int i = 0; mnemonic[i] != '\0'; i++)
+      mnemonic[i] = toupper(mnemonic[i]);
+
+    command_invoke(client, mnemonic, parameters);
+  }
 }
 
 static void handle_control_events(client_t *client)
