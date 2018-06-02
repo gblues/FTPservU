@@ -85,13 +85,16 @@ int network_create_serversocket(int port)
 int network_accept_poll(int socket, accept_cb callback)
 {
   struct sockaddr_in client;
-  socklen_t len;
+  socklen_t len = sizeof(client);
 
   bool socketqueue_exhausted = false;
   int errno;
 
   if(callback == NULL)
+  {
+    console_printf("FATAL: no callback given to network_accept_poll");
     return -1;
+  }
 
   do {
     memset(&client, 0, sizeof(client));
@@ -102,11 +105,16 @@ int network_accept_poll(int socket, accept_cb callback)
       if( errno == EAGAIN || errno == EWOULDBLOCK )
         socketqueue_exhausted = true;
       else
+      {
+        console_printf("FATAL: accept failed (%d)", errno);
         return -1;
+      }
     } else {
       callback(fd, &client, len);
     }
   } while(!socketqueue_exhausted);
+
+  return 0;
 }
 
 s32 network_close(int socket)

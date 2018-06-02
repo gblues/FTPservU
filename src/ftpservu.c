@@ -145,7 +145,6 @@ void ftpserver_main_loop(void)
         break;
     }
   }
-  usleep(5000000);
 }
 
 int main(int argc, char **argv)
