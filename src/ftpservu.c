@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <string.h>
 #include <malloc.h>
 #include <iosuhax.h>
@@ -120,10 +121,17 @@ void ftpserver_main_loop(void)
 
   if(serverSocket >= 0)
     console_printf("Listening on port %d", TCP_PORT);
+  else
+  {
+    console_printf("Failed to create server socket (%d), terminating...", serverSocket);
+  }
 
   while( serverSocket >= 0 && !network_down )
   {
     network_down = ftp_network_handler(serverSocket);
+    if(network_down)
+      console_printf("encountered a fatal network error, terminating...");
+
     cmd = input_handler();
     switch(cmd)
     {
@@ -137,6 +145,7 @@ void ftpserver_main_loop(void)
         break;
     }
   }
+  usleep(5000000);
 }
 
 int main(int argc, char **argv)
@@ -147,6 +156,7 @@ int main(int argc, char **argv)
   console_init();
   VPADInit();
   screen_init();
+  network_init();
 
   console_printf("Starting FTPServU v%s", PACKAGE_VERSION);
   ftpserver_main_loop();

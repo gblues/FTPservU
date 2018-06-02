@@ -8,6 +8,7 @@
 
 #include "ftpservu_types.h"
 
+void network_init(void);
 int network_create_serversocket(int port);
 int network_accept_poll(int socket, accept_cb callback);
 s32 network_close(int socket);

@@ -1,16 +1,28 @@
 #include <string.h>
 
+#include "console.h"
 #include "network.h"
 #include "iobuffer.h"
 
+void network_init(void)
+{
+  socket_lib_init();
+}
+
 static int setup_server_socket(void)
 {
+  int errno = 0;
   u32 so_reuseaddr  = 1;
-  u32 so_nonblock = 1;
+  u32 so_nonblock   = 1;
+
   /* get the socket from the OS */
   int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
   if(sock < 0)
+  {
+    errno = socketlasterr();
+    console_printf("FATAL: failed to create socket: %d", errno);
     return -1;
+  }
 
   /* Set to non-blocking I/O */
   setsockopt(sock, SOL_SOCKET, SO_NONBLOCK, &so_nonblock, sizeof(so_nonblock));
@@ -23,27 +35,47 @@ static int setup_server_socket(void)
 static int bind_to_port(int socket, int port)
 {
   struct sockaddr_in bindAddress;
+  int result = -1;
+  int errno = 0;
 
   memset(&bindAddress, 0, sizeof(bindAddress));
   bindAddress.sin_family = AF_INET;
   bindAddress.sin_port = htons(port);
   bindAddress.sin_addr.s_addr = htonl(INADDR_ANY);
 
-  return bind(socket, (struct sockaddr *)&bindAddress, sizeof(bindAddress));
+  result = bind(socket, (struct sockaddr *)&bindAddress, sizeof(bindAddress));
+  if(result < 0)
+  {
+    errno = socketlasterr();
+
+    console_printf("FATAL: Failed to bind socket to port %d: %d", port, errno);
+  }
+
+  return result;
 }
 
 int network_create_serversocket(int port)
 {
   int socket = 0;
+  int result = -1;
+  int errno = 0;
 
   socket = setup_server_socket();
+  if(socket < 0) return -1;
 
-  if( (socket < 0) ||
-      (bind_to_port(socket,port) < 0) ||
-      (listen(socket, FTP_SOCKET_BACKLOG) < 0) )
+  if(bind_to_port(socket, port) < 0)
   {
-    if(socket >= 0)
-      socketclose(socket);
+    socketclose(socket);
+    return -1;
+  }
+
+  result = listen(socket, FTP_SOCKET_BACKLOG);
+  if(result < 0)
+  {
+    errno = socketlasterr();
+    console_printf("FATAL: failed to listen to port %d with backlog %d: %d",
+      port, FTP_SOCKET_BACKLOG, errno);
+    socketclose(socket);
     return -1;
   }
 
