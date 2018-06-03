@@ -20,6 +20,7 @@
 #include "ftp.h"
 #include "input.h"
 #include "console.h"
+#include "logging.h"
 
 #define TCP_PORT              21
 
@@ -152,6 +153,7 @@ int main(int argc, char **argv)
   (int) argc;
   (char **)argv;
 
+  logging_init();
   console_init();
   VPADInit();
   screen_init();
@@ -163,4 +165,5 @@ int main(int argc, char **argv)
 
   ftp_deinit();
   console_deinit();
+  logging_deinit();
 }

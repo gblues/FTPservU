@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include "console.h"
 #include "commands.h"
 #include "ftp.h"
 
@@ -47,10 +48,16 @@ void command_invoke(client_t *client, char *mnemonic, char *parameter)
 {
   const command_t *cmd = find_command(mnemonic);
   if(!cmd)
+  {
+    console_printf("ERROR: failed to find a command for mnemonic: '%s'", mnemonic);
     return;
+  }
 
   if(cmd->authentication && !client->authenticated)
+  {
+    console_printf("ERROR: cannot use '%s' without being authenticated.", mnemonic);
     return;
+  }
 
   cmd->func(client, parameter);
 }

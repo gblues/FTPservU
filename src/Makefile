@@ -39,6 +39,7 @@ OBJ += input.o
 OBJ += iobuffer.o
 OBJ += commands.o
 OBJ += console.o
+OBJ += logging.o
 OBJ += main.o
 OBJ += hbl.o
 OBJ += fs/sd_fat_devoptab.o

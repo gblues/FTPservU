@@ -3,6 +3,7 @@
 #include "wiiu/types.h"
 #include "malloc.h"
 
+#include "console.h"
 #include "commands.h"
 #include "network.h"
 #include "ftp.h"
@@ -66,6 +67,7 @@ static void ftp_process_command(client_t *client, uint8_t *command)
   char *mnemonic = NULL;
   char *parameters = NULL;
 
+  console_printf("Client sent: %s", command);
   /* get_mnemonic automatically fast-forwards command */
   mnemonic = get_mnemonic(&command);
   parameters = command;
