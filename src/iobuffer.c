@@ -82,7 +82,6 @@ uint8_t *iobuffer_next_line(io_buffer_t *buffer)
 
   /* copy string up to (but not including) EOL characters */
   bytesToCopy = (eol > 0 && buffer->buffer[eol-1] == '\r') ? (eol-1) : eol;
-  printf("buffer->head: %d; eol: %d; bytesToCopy: %d\n", buffer->head, eol, bytesToCopy);
   memcpy(buffer->line, buffer->buffer, bytesToCopy);
   buffer->line[bytesToCopy] = '\0';
   /* move memory forward, update the head, and zero out the empty part of the

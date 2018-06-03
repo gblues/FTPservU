@@ -35,7 +35,7 @@ char *get_mnemonic(uint8_t **buffer)
   char *mnemonic = NULL;
 
   while(isspace(**buffer))
-    *buffer++;
+    (*buffer)++;
 
   if(**buffer == '\0')
     return NULL;
@@ -46,7 +46,7 @@ char *get_mnemonic(uint8_t **buffer)
   {
     if(!isalpha(**buffer))
       return NULL;
-    *buffer++;
+    (*buffer)++;
   }
 
   /* if there's something after the mnemonic, fast-forward the buffer to the first non-whitespace
@@ -54,9 +54,9 @@ char *get_mnemonic(uint8_t **buffer)
   if(**buffer != '\0')
   {
     **buffer = '\0';
-    *buffer++;
+    (*buffer)++;
     while(isspace(**buffer))
-      *buffer++;
+      (*buffer)++;
   }
 
   return mnemonic;
@@ -82,6 +82,8 @@ static void ftp_process_command(client_t *client, uint8_t *command)
     for(int i = 0; mnemonic[i] != '\0'; i++)
       mnemonic[i] = toupper(mnemonic[i]);
 
+    printf("mnemonic: %s\n", mnemonic);
+    printf("parameters: %s\n", ((parameters == NULL) ? "(null)" : parameters));
     command_invoke(client, mnemonic, parameters);
   }
 }
