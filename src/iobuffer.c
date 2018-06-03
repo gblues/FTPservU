@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -74,17 +75,19 @@ uint8_t *iobuffer_next_line(io_buffer_t *buffer)
     }
   }
 
+
   if(eol < 0)
     return NULL;
   start = eol+1;
 
   /* copy string up to (but not including) EOL characters */
   bytesToCopy = (eol > 0 && buffer->buffer[eol-1] == '\r') ? (eol-1) : eol;
-  memcpy(buffer->buffer, buffer->line, bytesToCopy);
+  printf("buffer->head: %d; eol: %d; bytesToCopy: %d\n", buffer->head, eol, bytesToCopy);
+  memcpy(buffer->line, buffer->buffer, bytesToCopy);
   buffer->line[bytesToCopy] = '\0';
   /* move memory forward, update the head, and zero out the empty part of the
    * buffer */
-  memmove(buffer->buffer+start, buffer->buffer, (buffer->size - start));
+  memmove(buffer->buffer, buffer->buffer+start, (buffer->size - start));
   buffer->head -= start;
   memset(buffer->buffer+buffer->head, 0, (buffer->size - buffer->head));
 

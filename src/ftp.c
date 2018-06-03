@@ -3,6 +3,7 @@
 #include "wiiu/types.h"
 #include "malloc.h"
 
+#include "logging.h"
 #include "console.h"
 #include "commands.h"
 #include "network.h"
@@ -16,13 +17,17 @@ client_t *clients[MAX_CLIENTS];
 client_t *new_client(void);
 void free_client(client_t *client);
 
-
 static void handle_data_events(client_t *client)
 {
 }
 
 static void ftp_client_cleanup(client_t *client)
 {
+  for(int i = 0; i < MAX_CLIENTS; i++)
+    if(clients[i] == client)
+      clients[i] = NULL;
+
+  free_client(client);
 }
 
 char *get_mnemonic(uint8_t **buffer)
@@ -93,12 +98,19 @@ static void handle_control_events(client_t *client)
   /* client has no more bytes to read */
   if(nread == -EAGAIN)
     return;
+
   /* something went wrong with the connection */
   if(nread <= 0)
   {
+    if(nread == 0)
+      log_printf("[ftp]: EOF when reading from client.\n");
+    else
+      log_printf("[ftp]: Error when reading: %d\n", nread);
+
     ftp_client_cleanup(client);
     return;
   }
+  log_printf("[ftp]: read %d bytes\n", nread);
 
   uint8_t *line;
 
@@ -132,7 +144,17 @@ static int find_open_client_slot(void)
  */
 void ftp_accept_handler(int fd, struct sockaddr_in *sockaddr, socklen_t size)
 {
-  // console_printf("Accepted connection from %s!\n", ...
+  if(sockaddr == NULL)
+  {
+    log_printf("[ftp]: accept handler received null sockaddr\n");
+    return;
+  }
+
+  console_printf("Accepted connection from %d.%d.%d.%d!",
+    (sockaddr->sin_addr.s_addr & 0xff000000) >> 24,
+    (sockaddr->sin_addr.s_addr & 0x00ff0000) >> 16,
+    (sockaddr->sin_addr.s_addr & 0x0000ff00) >> 8,
+    (sockaddr->sin_addr.s_addr & 0x000000ff) );
   int slot = find_open_client_slot();
   if(slot < 0)
   {
@@ -199,6 +221,10 @@ client_t *new_client(void)
 void free_client(client_t *client)
 {
   if(client) {
+    if(client->fd >= 0) {
+      socketclose(client->fd);
+      client->fd = -1;
+    }
     if(client->input_buffer) {
       free_buffer(client->input_buffer);
      client->input_buffer = NULL;

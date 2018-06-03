@@ -3,9 +3,15 @@
 #include "console.h"
 #include "network.h"
 #include "iobuffer.h"
-
+#include "wiiu/ac.h"
+/*
+ * Tell the Wii U to connect to its default network profile, then init the socket library.
+ */
 void network_init(void)
 {
+  ACInitialize();
+  ACConnect();
+
   socket_lib_init();
 }
 

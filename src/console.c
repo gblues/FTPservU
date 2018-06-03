@@ -3,7 +3,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-#include "wiiu/os/screen.h"
+#include "wiiu/os.h"
 #include "console.h"
 
 #define MAX_CONSOLE_LINES_TV  27
@@ -12,7 +12,30 @@
 static char *tvConsole[MAX_CONSOLE_LINES_TV];
 static char *padConsole[MAX_CONSOLE_LINES_PAD];
 
-void console_screen_draw(int screen, char **term, int term_size)
+static bool initialized = false;
+
+static void screen_init(void)
+{
+  int bufsize = 0;
+
+  if(initialized) return;
+
+  OSScreenInit();
+  bufsize = OSScreenGetBufferSizeEx(0);
+
+  OSScreenSetBufferEx(0, (void *)0xf4000000);
+  OSScreenSetBufferEx(1, (void *)(0xf4000000 + bufsize));
+
+  for(OSScreenID screen = 0; screen < 2; screen++)
+  {
+    OSScreenEnableEx(screen, 1);
+    OSScreenFlipBuffersEx(screen);
+  }
+
+  initialized = true;
+}
+
+static void console_screen_draw(int screen, char **term, int term_size)
 {
   int i;
   OSScreenClearBufferEx(screen, 0);
@@ -23,8 +46,9 @@ void console_screen_draw(int screen, char **term, int term_size)
   OSScreenFlipBuffersEx(screen);
 }
 
-void console_draw()
+static void console_draw()
 {
+  screen_init();
   console_screen_draw(0, tvConsole, MAX_CONSOLE_LINES_TV);
   console_screen_draw(1, padConsole, MAX_CONSOLE_LINES_PAD);
 }

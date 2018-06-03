@@ -96,22 +96,6 @@ void remount_filesystems()
   mount_filesystems();
 }
 
-void screen_init()
-{
-  int bufsize = 0;
-
-  OSScreenInit();
-  bufsize = OSScreenGetBufferSizeEx(0);
-  OSScreenSetBufferEx(0, (void *)0xf4000000);
-  OSScreenSetBufferEx(1, (void *)(0xf4000000 + bufsize));
-
-  OSScreenEnableEx(0, 1);
-  OSScreenEnableEx(1, 1);
-
-  OSScreenFlipBuffersEx(0);
-  OSScreenFlipBuffersEx(1);
-}
-
 void ftpserver_main_loop(void)
 {
   int serverSocket = 0;
@@ -152,12 +136,11 @@ int main(int argc, char **argv)
 {
   (int) argc;
   (char **)argv;
+  console_init();
+  network_init();
 
   logging_init();
-  console_init();
   VPADInit();
-  screen_init();
-  network_init();
 
   console_printf("Starting FTPServU v%s", PACKAGE_VERSION);
   ftpserver_main_loop();
