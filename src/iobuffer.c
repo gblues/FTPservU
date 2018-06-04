@@ -59,36 +59,82 @@ uint8_t *iobuffer_head(io_buffer_t *buffer)
   return buffer->buffer + buffer->head;
 }
 
-uint8_t *iobuffer_next_line(io_buffer_t *buffer)
+int iobuffer_append(io_buffer_t *buffer, void *data, int len)
 {
-  int i;
-  int eol = -1;
-  int start = -1;
-  int bytesToCopy = 0;
-
-  for(i = 0; i < buffer->head; i++)
+  if(data == NULL)
   {
-    if( buffer->buffer[i] == '\n' )
-    {
-      eol = i;
-      break;
-    }
+    printf("[iobuffer]: cannot append NULL data\n");
+    return -1;
   }
 
+  if(buffer->head + len > buffer->size)
+  {
+    printf("[iobuffer]: append would overflow buffer\n");
+    return -1;
+  }
+
+  memcpy(buffer->buffer+buffer->head, data, len);
+  buffer->head += len;
+
+  return 0;
+}
+
+static int find_eol(uint8_t *data, int limit)
+{
+  for(int i = 0; i < limit; i++)
+    if(data[i] == '\n')
+      return i;
+
+  return -1;
+}
+
+static int calculate_bytes_to_copy(int eol_offset, bool has_cr, bool preserve_newlines)
+{
+  int result = 0;
+  if(preserve_newlines)
+  {
+    result = eol_offset+1;
+  } else {
+    result = (has_cr) ? eol_offset-1 : eol_offset;
+  }
+
+  return result;
+}
+
+static uint8_t *__iobuffer_next_line(io_buffer_t *buffer, bool preserve_newline)
+{
+  int eol = find_eol(buffer->buffer, buffer->head);
 
   if(eol < 0)
     return NULL;
-  start = eol+1;
 
-  /* copy string up to (but not including) EOL characters */
-  bytesToCopy = (eol > 0 && buffer->buffer[eol-1] == '\r') ? (eol-1) : eol;
+  int bytesToCopy = calculate_bytes_to_copy(eol, (buffer->buffer[eol-1] == '\r'), preserve_newline);
+  int newBufferStart = eol+1;
+
   memcpy(buffer->line, buffer->buffer, bytesToCopy);
   buffer->line[bytesToCopy] = '\0';
-  /* move memory forward, update the head, and zero out the empty part of the
-   * buffer */
-  memmove(buffer->buffer, buffer->buffer+start, (buffer->size - start));
-  buffer->head -= start;
+
+  memmove(buffer->buffer, buffer->buffer+newBufferStart, (buffer->size - newBufferStart));
+  buffer->head -= newBufferStart;
   memset(buffer->buffer+buffer->head, 0, (buffer->size - buffer->head));
 
   return buffer->line;
+}
+
+/*
+ * Read the next line out of the buffer. This version preserves EOL
+ * characters.
+ */
+uint8_t *iobuffer_next_line_eol(io_buffer_t *buffer)
+{
+  return __iobuffer_next_line(buffer, true);
+}
+
+/*
+ * Read the next line out of the buffer. This version removes the EOL
+ * character(s).
+ */
+uint8_t *iobuffer_next_line(io_buffer_t *buffer)
+{
+  return __iobuffer_next_line(buffer, false);
 }

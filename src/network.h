@@ -13,5 +13,6 @@ int network_create_serversocket(int port);
 int network_accept_poll(int socket, accept_cb callback);
 s32 network_close(int socket);
 int network_read_buffer(int socket, io_buffer_t *buffer);
+int network_writeln(int socket, char *line);
 
 #endif /* _NETWORK_H */

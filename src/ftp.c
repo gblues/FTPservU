@@ -1,4 +1,7 @@
+#define _GNU_SOURCE
+#include <stdio.h>
 #include <ctype.h>
+#include <string.h>
 
 #include "wiiu/types.h"
 #include "malloc.h"
@@ -120,6 +123,24 @@ static void handle_control_events(client_t *client)
     ftp_process_command(client, line);
 }
 
+static void handle_output(client_t *client)
+{
+  if(client == NULL)
+  {
+    printf("[ftp]: handle_output: null client\n");
+    return;
+  }
+
+  /* nothing to do */
+  if(client->output_buffer->head == 0)
+    return;
+
+  char *line = NULL;
+
+  while( (line = iobuffer_next_line_eol(client->output_buffer)) != NULL )
+    network_writeln(client->fd, line);
+}
+
 static void handle_client(client_t *client)
 {
   if(client == NULL)
@@ -129,6 +150,8 @@ static void handle_client(client_t *client)
     handle_data_events(client);
   else
     handle_control_events(client);
+
+  handle_output(client);
 }
 
 static int find_open_client_slot(void)
@@ -172,6 +195,8 @@ void ftp_accept_handler(int fd, struct sockaddr_in *sockaddr, socklen_t size)
     return;
   }
 
+  ftp_response(220, client, "FTPservU, here to serve you!");
+
   client->fd = fd;
   clients[slot] = client;
 }
@@ -209,8 +234,9 @@ client_t *new_client(void)
     goto error;
 
   client->input_buffer = new_buffer(FTP_BUFFER);
+  client->output_buffer = new_buffer(FTP_BUFFER);
 
-  if(client->input_buffer == NULL)
+  if(client->input_buffer == NULL || client->output_buffer == NULL)
     goto error;
 
   return client;
@@ -223,14 +249,33 @@ client_t *new_client(void)
 void free_client(client_t *client)
 {
   if(client) {
+    client->state = STATE_NONE;
+
     if(client->fd >= 0) {
       socketclose(client->fd);
       client->fd = -1;
     }
+
     if(client->input_buffer) {
       free_buffer(client->input_buffer);
-     client->input_buffer = NULL;
+      client->input_buffer = NULL;
     }
+
+    if(client->output_buffer) {
+      free_buffer(client->output_buffer);
+      client->output_buffer = NULL;
+    }
+
     free(client);
+  }
+}
+
+void ftp_response(int code, client_t *client, const char *msg)
+{
+  char *response = NULL;
+  asprintf(&response, "%d %s\r\n", code, msg);
+  if(response != NULL) {
+    iobuffer_append(client->output_buffer, response, strlen(response));
+    free(response);
   }
 }

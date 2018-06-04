@@ -53,7 +53,7 @@ void command_invoke(client_t *client, char *mnemonic, char *parameter)
     return;
   }
 
-  if(cmd->authentication && !client->authenticated)
+  if(cmd->authentication && !IS_AUTHENTICATED(client))
   {
     console_printf("ERROR: cannot use '%s' without being authenticated.", mnemonic);
     return;

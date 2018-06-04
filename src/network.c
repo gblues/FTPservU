@@ -154,3 +154,21 @@ int network_read_buffer(int socket, io_buffer_t *buffer)
 
   return nread;
 }
+
+int network_writeln(int socket, char *line)
+{
+  if(socket < 0)
+    return -1;
+
+  int len = strlen(line);
+
+  if(len == 0)
+    return 0;
+
+  int nwritten = send(socket, line, len, 0);
+
+  if(nwritten < 0)
+    nwritten = -socketlasterr();
+
+  return nwritten;
+}
