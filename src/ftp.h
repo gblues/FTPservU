@@ -10,6 +10,7 @@
 #define STATE_USER 0x00000001 /* USER has been provided */
 #define STATE_AUTH 0x00000002 /* client is authenticated */
 #define STATE_RNFR 0x00000004 /* client sent RNFR */
+#define STATE_DISCONN 0x0000008 /* client logged out */
 
 #define IS_AUTHENTICATED(client) (client->state >= STATE_AUTH)
 
@@ -27,6 +28,5 @@ int ftp_network_handler(int socket);
 void ftp_deinit(void);
 
 void ftp_response(int code, client_t *client, const char *msg);
-void ftp_disconnect(client_t *client);
 
 #endif /* _FTP_H */

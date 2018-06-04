@@ -152,6 +152,8 @@ static void handle_client(client_t *client)
     handle_control_events(client);
 
   handle_output(client);
+  if(client->state & STATE_DISCONN)
+    ftp_client_cleanup(client);
 }
 
 static int find_open_client_slot(void)
@@ -279,10 +281,3 @@ void ftp_response(int code, client_t *client, const char *msg)
     free(response);
   }
 }
-
-void ftp_disconnect(client_t *client)
-{
-  handle_output(client);
-  ftp_client_cleanup(client);
-}
-

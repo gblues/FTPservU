@@ -99,8 +99,8 @@ void do_pass(client_t *client, char *command)
 
 void do_quit(client_t *client, char *command)
 {
+  client->state |= STATE_DISCONN;
   ftp_response(221, client, "Service closing control connection.");
-  ftp_disconnect(client);
 }
 
 void do_reinitialize(client_t *client, char *command)
