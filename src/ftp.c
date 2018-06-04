@@ -279,3 +279,10 @@ void ftp_response(int code, client_t *client, const char *msg)
     free(response);
   }
 }
+
+void ftp_disconnect(client_t *client)
+{
+  handle_output(client);
+  ftp_client_cleanup(client);
+}
+

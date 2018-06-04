@@ -27,5 +27,6 @@ int ftp_network_handler(int socket);
 void ftp_deinit(void);
 
 void ftp_response(int code, client_t *client, const char *msg);
+void ftp_disconnect(client_t *client);
 
 #endif /* _FTP_H */

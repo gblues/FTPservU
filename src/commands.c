@@ -62,24 +62,56 @@ void command_invoke(client_t *client, char *mnemonic, char *parameter)
   cmd->func(client, parameter);
 }
 
+/*
+ * According to RFC, a user may use the USER command to switch accounts
+ * at any time. Specifying the USER zaps all previous authentication info.
+ */
 void do_user(client_t *client, char *command)
 {
+  client->state = STATE_USER;
+  ftp_response(331, client, "Username OK. Ready for password.");
 }
 
+/**
+ * PASS must come immediately after USER. Any other usage is an error.
+ * If PASS is given first, we provide a nice "need account" response.
+ * Otherwise a meaner "wrong order, dummy" message.
+ */
 void do_pass(client_t *client, char *command)
 {
+  switch(client->state)
+  {
+    /* no user given yet */
+    case STATE_NONE:
+    ftp_response(332, client, "Need account for login.");
+    break;
+    case STATE_USER:
+    /* user has been given */
+    client->state = STATE_AUTH;
+    ftp_response(230, client, "User logged in successfully.");
+    break;
+    /* user is already authenticated */
+    default:
+    ftp_response(503, client, "Bad sequence of commands.");
+    break;
+  }
 }
 
 void do_quit(client_t *client, char *command)
 {
+  ftp_response(221, client, "Service closing control connection.");
+  ftp_disconnect(client);
 }
 
 void do_reinitialize(client_t *client, char *command)
 {
+  client->state = STATE_NONE;
+  ftp_response(220, client, "Service ready for new user.");
 }
 
 void do_noop(client_t *client, char *command)
 {
+  ftp_response(200, client, "Okey dokey artichokey!");
 }
 
 void do_list(client_t *client, char *command)
@@ -116,6 +148,7 @@ void do_type(client_t *client, char *command)
 
 void do_system(client_t *client, char *command)
 {
+  ftp_response(215, client, "UNIX Type: L8 Version: FTPservU");
 }
 
 void do_mode(client_t *client, char *command)
