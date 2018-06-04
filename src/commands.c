@@ -49,13 +49,17 @@ void command_invoke(client_t *client, char *mnemonic, char *parameter)
   const command_t *cmd = find_command(mnemonic);
   if(!cmd)
   {
-    console_printf("ERROR: failed to find a command for mnemonic: '%s'", mnemonic);
-    return;
+    printf("[commands]: got unknown/unimplemented mnemonic '%s'\n", mnemonic);
+    if(IS_AUTHENTICATED(client))
+    {
+      ftp_response(502, client, "Command not implemented.");
+      return;
+    }
   }
 
-  if(cmd->authentication && !IS_AUTHENTICATED(client))
+  if( !cmd || (cmd->authentication && !IS_AUTHENTICATED(client)) )
   {
-    console_printf("ERROR: cannot use '%s' without being authenticated.", mnemonic);
+    ftp_response(530, client, "Please login with USER and PASS.");
     return;
   }
 
