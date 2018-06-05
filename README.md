@@ -19,15 +19,19 @@ So, it became a rewrite of sorts:
 3. Applying my own design standards to it to improve code
    quality.
 
-## What's new?
+## Status
 
-Well, nothing, yet. Right now, it doesn't even work.
+FTPservU is not yet functional as an FTP server.
 
-The feature that I'm trying to add is the ability to unmount and
-remount filesystems, so that a user can swap SD cards at runtime.
-
-This is borne out of necessity: my PC's SD card reader can't read 
-my new SDHC card, and I don't want to buy a reader.
+- [x] Compiles with no warnings
+- [x] Launches without DSI error / crash
+- [x] Welcome message displayed upon connection
+- [x] successfully parses out commands sent to the control connection
+- [x] successfully responses back to the control connection
+- [x] authentication commands implemented
+- [ ] Passive transfer mode implemented
+- [ ] Active transfer mode implemented
+- [ ] Data commands implemented
 
 ## Building
 
