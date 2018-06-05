@@ -1,4 +1,8 @@
+#define _GNU_SOURCE
+
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #include "console.h"
 #include "commands.h"
@@ -140,6 +144,24 @@ void do_size(client_t *client, char *command)
 
 void do_passive(client_t *client, char *command)
 {
+  if(client->passive == NULL)
+    client->passive = new_passive();
+
+  char *msg = NULL;
+
+  asprintf(&msg, "Entering passive mode (%d,%d,%d,%d,%d,%d)",
+    (client->passive->ip & 0xff000000) >> 24,
+    (client->passive->ip & 0x00ff0000) >> 16,
+    (client->passive->ip & 0x0000ff00) >> 8,
+    (client->passive->ip & 0x000000ff),
+    (client->passive->port & 0xff00) >> 8,
+    (client->passive->port & 0x00ff));
+
+  if(msg != NULL)
+  {
+    ftp_response(227, client, msg);
+    free(msg);
+  }
 }
 
 void do_port(client_t *client, char *command)
