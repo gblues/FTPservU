@@ -170,11 +170,11 @@ static int find_open_client_slot(void)
  * Will get invoked for each successfully established connection
  * via network_accept_poll
  */
-void ftp_accept_handler(int fd, struct sockaddr_in *sockaddr, socklen_t size)
+void ftp_accept_handler(int fd, struct sockaddr_in *sockaddr, socklen_t size, void *unused)
 {
   if(sockaddr == NULL)
   {
-    log_printf("[ftp]: accept handler received null sockaddr\n");
+    printf("[ftp]: accept handler received null sockaddr\n");
     return;
   }
 
@@ -220,7 +220,7 @@ int ftp_network_handler(int socket)
 {
   int i;
 
-  if( network_accept_poll(socket, ftp_accept_handler) < 0 )
+  if( network_accept_poll(socket, ftp_accept_handler, NULL) < 0 )
     return -1;
 
   for(i = 0; i < MAX_CLIENTS; i++)

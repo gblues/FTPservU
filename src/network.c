@@ -60,7 +60,7 @@ static int bind_to_port(int socket, int port)
   return result;
 }
 
-int network_create_serversocket(int port)
+int network_create_serversocket(int port, int backlog)
 {
   int socket = 0;
   int result = -1;
@@ -75,7 +75,7 @@ int network_create_serversocket(int port)
     return -1;
   }
 
-  result = listen(socket, FTP_SOCKET_BACKLOG);
+  result = listen(socket, backlog);
   if(result < 0)
   {
     errno = socketlasterr();
@@ -88,7 +88,7 @@ int network_create_serversocket(int port)
   return socket;
 }
 
-int network_accept_poll(int socket, accept_cb callback)
+int network_accept_poll(int socket, accept_cb callback, void *userptr)
 {
   struct sockaddr_in client;
   socklen_t len = sizeof(client);
@@ -116,7 +116,7 @@ int network_accept_poll(int socket, accept_cb callback)
         return -1;
       }
     } else {
-      callback(fd, &client, len);
+      callback(fd, &client, len, userptr);
     }
   } while(!socketqueue_exhausted);
 

@@ -1,7 +1,9 @@
 #include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include "sys/socket.h"
 
+#include "console.h"
 #include "iobuffer.h"
 #include "passive.h"
 #include "network.h"
@@ -29,8 +31,36 @@ static int get_pasv_port(void)
   return result;
 }
 
+static void pasv_accept_handler(int fd, struct sockaddr_in *sockaddr, socklen_t size, void *data)
+{
+  passive_t *pasv = (passive_t *)data;
+
+  if(sockaddr == NULL)
+  {
+    printf("[pasv]: accept handler received null sockaddr\n");
+    return;
+  }
+
+  console_printf("Accepted PASV data connection from %d.%d.%d.%d!",
+    (sockaddr->sin_addr.s_addr & 0xff000000) >> 24,
+    (sockaddr->sin_addr.s_addr & 0x00ff0000) >> 16,
+    (sockaddr->sin_addr.s_addr & 0x0000ff00) >> 8,
+    (sockaddr->sin_addr.s_addr & 0x000000ff) );
+
+  network_close(pasv->listen_fd);
+  pasv->listen_fd = -1;
+
+  pasv->client_fd = fd;
+  pasv->state = PASV_CONN;
+}
+
 static void pasv_try_accept(passive_t *pasv)
 {
+  if(!pasv || pasv->state != PASV_NONE)
+    return;
+
+  if( network_accept_poll(pasv->listen_fd, pasv_accept_handler, pasv) < 0 )
+    pasv->state = PASV_DONE;
 }
 
 static void pasv_send_data(passive_t *pasv)
@@ -90,7 +120,7 @@ passive_t *new_passive(void)
     if(result->ip == 0)
       goto error;
 
-    result->listen_fd = network_create_serversocket(result->port);
+    result->listen_fd = network_create_serversocket(result->port, 1);
     if(result->listen_fd < 0)
       goto error;
     /* 192K is 128 1500-byte packets, and also 375 512-byte blocks */

@@ -102,7 +102,7 @@ void ftpserver_main_loop(void)
   int cmd = 0;
   bool network_down = false;
 
-  serverSocket = network_create_serversocket(TCP_PORT);
+  serverSocket = network_create_serversocket(TCP_PORT, FTP_SOCKET_BACKLOG);
 
   if(serverSocket >= 0)
     console_printf("Listening on port %d", TCP_PORT);
