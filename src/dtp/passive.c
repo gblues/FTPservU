@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "sys/socket.h"
 
 #include "console.h"
@@ -63,12 +64,54 @@ static void pasv_try_accept(passive_t *pasv)
     pasv->state = PASV_DONE;
 }
 
+static int write_buffered_data_to_fd(int fd, io_buffer_t *buffer, int packetSize)
+{
+  int nwritten = 0;
+
+  if(fd < 0 || buffer == NULL || packetSize < 0)
+    return -1;
+
+  if(packetSize > buffer->head)
+    packetSize = buffer->head;
+
+  nwritten = write(fd, buffer->buffer, packetSize);
+
+  if(nwritten < 0)
+  {
+    int errno = socketlasterr();
+    if(errno != EAGAIN)
+    {
+      printf("[passive]: error writing data to client: %d\n", errno);
+      return -errno;
+    }
+    return 0;
+  }
+
+  memmove(buffer->buffer, buffer->buffer+nwritten, buffer->size - nwritten);
+  buffer->head -= nwritten;
+
+  return nwritten;
+}
+
 static void pasv_send_data(passive_t *pasv)
 {
+  if(!pasv || !pasv->buffer)
+    return;
+
+  int result = write_buffered_data_to_fd(pasv->client_fd, pasv->buffer, 1500);
+  if(result < 0)
+    pasv->state = PASV_DONE;
 }
 
 static void pasv_recv_data(passive_t *pasv)
 {
+  if(!pasv || !pasv->buffer)
+    return;
+
+  int result = write_buffered_data_to_fd(pasv->file_fd, pasv->buffer, 512);
+  if(result < 0)
+    pasv->state = PASV_DONE;
+
 }
 
 void passive_poll(void)

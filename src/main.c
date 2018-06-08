@@ -22,8 +22,6 @@
 #include <iosuhax.h>
 #include <sys/iosupport.h>
 
-#include "main.h"
-
 #include "hbl.h"
 
 #include "fs/fs_utils.h"
@@ -188,36 +186,47 @@ static void try_shutdown_iosuhax(void)
   iosuhaxMount = false;
 }
 
+/**
+ * Mount the filesystem(s) needed by the application. By default, we
+ * mount the SD card to /sd.
+ *
+ * The 'iosuhaxMount' symbol used here is public and can be referenced
+ * in overriding implementations.
+ */
+__attribute__((weak))
+void __mount_filesystems(void)
+{
+   if(iosuhaxMount)
+      fatInitDefault();
+   else
+      mount_sd_fat("sd");
+}
+
+/**
+ * Unmount filesystems. Implementing applications should be careful to
+ * clean up anything mounted in __mount_filesystems() here.
+ */
+__attribute__((weak))
+void __unmount_filesystems(void)
+{
+  if (iosuhaxMount)
+  {
+    fatUnmount("sd:");
+    fatUnmount("usb:");
+  }
+  else
+    unmount_sd_fat("sd");
+}
+
 static void fsdev_init(void)
 {
    iosuhaxMount = try_init_iosuhax();
 
-   if(hooks.fs_mount != NULL && hooks.fs_unmount != NULL)
-     hooks.fs_mount();
-   else
-   {
-     if(iosuhaxMount)
-       fatInitDefault();
-     else
-       mount_sd_fat("sd");
-   }
+   __mount_filesystems();
 }
 
 static void fsdev_exit(void)
 {
-   if(hooks.fs_mount != NULL && hooks.fs_unmount != NULL)
-
-     hooks.fs_unmount();
-   else
-   {
-      if (iosuhaxMount)
-      {
-         fatUnmount("sd:");
-         fatUnmount("usb:");
-      }
-      else
-         unmount_sd_fat("sd");
-   }
-
+   __unmount_filesystems();
    try_shutdown_iosuhax();
 }

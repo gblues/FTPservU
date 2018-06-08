@@ -15,7 +15,6 @@
 #include "wiiu/vpad.h"
 
 #include "version.h"
-#include "main.h"
 #include "network.h"
 #include "ftp.h"
 #include "input.h"
@@ -27,7 +26,9 @@
 static bool fs_mounted = false;
 static int fsa_fd = -1;
 
-void mount_filesystems()
+extern int iosuhaxMount;
+
+void __mount_filesystems()
 {
   if(fs_mounted)
     return;
@@ -55,7 +56,7 @@ void mount_filesystems()
   fs_mounted = true;
 }
 
-void unmount_filesystems()
+void __unmount_filesystems()
 {
   if(!fs_mounted)
     return;
@@ -85,15 +86,10 @@ void unmount_filesystems()
   fs_mounted = false;
 }
 
-hooks_t hooks = {
-  mount_filesystems,
-  unmount_filesystems
-};
-
 void remount_filesystems()
 {
-  unmount_filesystems();
-  mount_filesystems();
+  __unmount_filesystems();
+  __mount_filesystems();
 }
 
 void ftpserver_main_loop(void)
