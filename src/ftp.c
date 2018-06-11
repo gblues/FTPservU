@@ -23,6 +23,31 @@ void free_client(client_t *client);
 
 static void handle_data_events(client_t *client)
 {
+  if(!client || !(client->state & STATE_DATA))
+    return;
+
+  if(client->data == NULL)
+  {
+    client->state &= ~STATE_DATA;
+    return;
+  }
+
+  if(client->data->state >= DTP_CLOSED)
+  {
+    switch(client->data->state)
+    {
+      case DTP_CLOSED:
+        ftp_response(226, client, "Transfer complete.");
+        break;
+      default:
+        ftp_response(420, client, "Transfer failed due to a network error.");
+        break;
+    }
+
+    client->data->state = DTP_FREE;
+    client->data = NULL;
+    client->state &= ~STATE_DATA;
+  }
 }
 
 static void ftp_client_cleanup(client_t *client)
@@ -146,6 +171,9 @@ static void handle_client(client_t *client)
 {
   if(client == NULL)
     return;
+
+  if(client->state & STATE_DATA)
+    handle_data_events(client);
 
   if(!(client->state & STATE_DATA))
     handle_control_events(client);

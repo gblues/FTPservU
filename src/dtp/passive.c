@@ -172,18 +172,18 @@ void passive_poll(void)
 
     switch(pasv->state)
     {
-      case PASV_NONE:
+      case DTP_PENDING:
         pasv_try_accept(pasv);
         break;
-      case PASV_CTS:
+      case DTP_XMIT:
         pasv_send_data(pasv);
         break;
-      case PASV_RTS:
+      case DTP_RECV:
         pasv_recv_data(pasv);
         break;
     }
 
-    if(pasv->state == PASV_FREE)
+    if(pasv->state == DTP_FREE)
       free_passive_channel(pasv);
     else
     {
