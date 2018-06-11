@@ -9,6 +9,8 @@
  * circular include dependencies.
  */
 
+typedef struct data_channel data_channel_t;
+typedef struct data_interface data_interface_t;
 typedef struct client_struct client_t;
 typedef struct command command_t;
 typedef struct io_buffer io_buffer_t;

@@ -42,6 +42,7 @@ OBJ += console.o
 OBJ += logging.o
 OBJ += main.o
 OBJ += dtp/passive.o
+OBJ += dtp/active.o
 OBJ += hbl.o
 OBJ += fs/sd_fat_devoptab.o
 OBJ += fs/fs_utils.o

@@ -11,7 +11,8 @@ typedef struct passive passive_t;
 #define PASV_CTS  0x02 // connection is sending data to client
 #define PASV_RTS  0x04 // connection is receiving data from client
 #define PASV_DONE 0x08 // transfer is done
-#define PASV_FREE 0x10 // ready for GC (detached from client)
+#define PASV_ERR  0x10 // an error occurred during transfer
+#define PASV_FREE 0x20 // ready for GC (detached from client)
 
 struct passive {
   passive_t *next;

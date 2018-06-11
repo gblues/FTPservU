@@ -96,7 +96,7 @@ static void handle_control_events(client_t *client)
 {
   int nread;
 
-  if(client->data_connection)
+  if(client->state & STATE_DATA)
     return;
 
   nread = network_read_buffer(client->fd, client->input_buffer);
@@ -147,9 +147,7 @@ static void handle_client(client_t *client)
   if(client == NULL)
     return;
 
-  if(client->data_connection)
-    handle_data_events(client);
-  else
+  if(!(client->state & STATE_DATA))
     handle_control_events(client);
 
   handle_output(client);
@@ -178,11 +176,12 @@ void ftp_accept_handler(int fd, struct sockaddr_in *sockaddr, socklen_t size, vo
     return;
   }
 
-  console_printf("Accepted connection from %d.%d.%d.%d!",
+  console_printf("Accepted connection from %d.%d.%d.%d:%d!",
     (sockaddr->sin_addr.s_addr & 0xff000000) >> 24,
     (sockaddr->sin_addr.s_addr & 0x00ff0000) >> 16,
     (sockaddr->sin_addr.s_addr & 0x0000ff00) >> 8,
-    (sockaddr->sin_addr.s_addr & 0x000000ff) );
+    (sockaddr->sin_addr.s_addr & 0x000000ff),
+    sockaddr->sin_port );
   int slot = find_open_client_slot();
   if(slot < 0)
   {
@@ -201,6 +200,8 @@ void ftp_accept_handler(int fd, struct sockaddr_in *sockaddr, socklen_t size, vo
   ftp_response(220, client, "FTPservU, here to serve you!");
 
   client->fd = fd;
+  client->ip = sockaddr->sin_addr.s_addr;
+  client->port = sockaddr->sin_port;
   clients[slot] = client;
 }
 
@@ -223,10 +224,10 @@ int ftp_network_handler(int socket)
   if( network_accept_poll(socket, ftp_accept_handler, NULL) < 0 )
     return -1;
 
+  passive_poll();
+
   for(i = 0; i < MAX_CLIENTS; i++)
     handle_client(clients[i]);
-
-  passive_poll();
 
   return 0;
 }

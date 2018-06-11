@@ -3,10 +3,12 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include "console.h"
 #include "commands.h"
 #include "ftp.h"
+#include "network.h"
 
 static const command_t commands[] = {
   { "USER", false, do_user },
@@ -142,20 +144,72 @@ void do_size(client_t *client, char *command)
 {
 }
 
+/*
+ * Takes a string in the form n1,n2,n3,n4,n5,n6
+ * and parses out n1-n6, then maps them to IP/port.
+ */
+static void parse_port_args(char *str, u32 *ip, u16 *port)
+{
+  int bytes[6] = { 0, 0, 0, 0, 0, 0 };
+  int segment = 0;
+  int digit = 0;
+  int tmp;
+
+  for(int i = 0; str[i] != '\0' && digit < 6; i++)
+  {
+    if(isspace(str[i])) continue;
+    if(!isdigit(str[i]) && str[i] != ',')
+      return;
+
+    if(isdigit(str[i]))
+    {
+      tmp = str[i] - '0';
+      segment = (segment * 10) + tmp;
+    }
+
+    if(str[i] == ',')
+    {
+      if(segment > 255)
+        return;
+
+      bytes[digit] = segment;
+      digit++;
+      segment = 0;
+    }
+  }
+  bytes[digit] = segment;
+
+  // client didn't pass enough comma-separated values
+  if(digit != 5)
+    return;
+
+  // client sent invalid byte sequences
+  for(int i = 0; i < 6; i++)
+    if(bytes[i] < 0 || bytes[i] > 255)
+      return;
+  // n1-n4 = client IP, n4-n5 = port
+  *ip = (bytes[0] << 24 | bytes[1] << 16 | bytes[2] << 8 | bytes[3]);
+  *port = (bytes[4] << 8 | bytes[5]);
+}
+
 void do_passive(client_t *client, char *command)
 {
-  if(client->passive == NULL)
-    client->passive = new_passive();
+  if(client->data != NULL) {
+    passive.free(client->data);
+    client->data = NULL;
+  }
+
+  client->data = passive.new(network_get_host_ip(), network_get_ephermal_port());
 
   char *msg = NULL;
 
   asprintf(&msg, "Entering passive mode (%d,%d,%d,%d,%d,%d)",
-    (client->passive->ip & 0xff000000) >> 24,
-    (client->passive->ip & 0x00ff0000) >> 16,
-    (client->passive->ip & 0x0000ff00) >> 8,
-    (client->passive->ip & 0x000000ff),
-    (client->passive->port & 0xff00) >> 8,
-    (client->passive->port & 0x00ff));
+    (client->data->ip & 0xff000000) >> 24,
+    (client->data->ip & 0x00ff0000) >> 16,
+    (client->data->ip & 0x0000ff00) >> 8,
+    (client->data->ip & 0x000000ff),
+    (client->data->port & 0xff00) >> 8,
+    (client->data->port & 0x00ff));
 
   if(msg != NULL)
   {
@@ -166,6 +220,17 @@ void do_passive(client_t *client, char *command)
 
 void do_port(client_t *client, char *command)
 {
+  u32 remote_ip = 0;
+  u16 remote_port = 0;
+
+  parse_port_args(command, &remote_ip, &remote_port);
+  if( remote_ip == 0 || remote_port == 0 )
+  {
+    ftp_response(500, client, "Failed to parse parameters.");
+    return;
+  }
+
+  client->data = active.new(remote_ip, remote_port);
 }
 
 void do_type(client_t *client, char *command)

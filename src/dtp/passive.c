@@ -7,19 +7,22 @@
 #include "console.h"
 #include "iobuffer.h"
 #include "passive.h"
+#include "dtp.h"
 #include "network.h"
 #include "wiiu/ac.h"
 
 static int pasv_port = 1024;
 
+static void free_passive_channel(data_channel_t *channel);
+
 /*
  * This list is read-only.
  */
-static passive_t *pasv_list = NULL;
+static data_channel_t *pasv_list = NULL;
 /*
  * This list is write-only. Do not iterate over this list.
  */
-static passive_t *next_pasv_list = NULL;
+static data_channel_t *next_pasv_list = NULL;
 
 static int get_pasv_port(void)
 {
@@ -34,7 +37,7 @@ static int get_pasv_port(void)
 
 static void pasv_accept_handler(int fd, struct sockaddr_in *sockaddr, socklen_t size, void *data)
 {
-  passive_t *pasv = (passive_t *)data;
+  data_channel_t *pasv = (data_channel_t *)data;
 
   if(sockaddr == NULL)
   {
@@ -51,17 +54,17 @@ static void pasv_accept_handler(int fd, struct sockaddr_in *sockaddr, socklen_t 
   network_close(pasv->listen_fd);
   pasv->listen_fd = -1;
 
-  pasv->client_fd = fd;
-  pasv->state = PASV_CONN;
+  pasv->remote_fd = fd;
+  pasv->state = DTP_ESTABLISHED;
 }
 
-static void pasv_try_accept(passive_t *pasv)
+static void pasv_try_accept(data_channel_t *channel)
 {
-  if(!pasv || pasv->state != PASV_NONE)
+  if(!channel || channel->state != DTP_PENDING)
     return;
 
-  if( network_accept_poll(pasv->listen_fd, pasv_accept_handler, pasv) < 0 )
-    pasv->state = PASV_DONE;
+  if( network_accept_poll(channel->listen_fd, pasv_accept_handler, channel) < 0 )
+    channel->state = DTP_ERROR;
 }
 
 static int write_buffered_data_to_fd(int fd, io_buffer_t *buffer, int packetSize)
@@ -93,30 +96,74 @@ static int write_buffered_data_to_fd(int fd, io_buffer_t *buffer, int packetSize
   return nwritten;
 }
 
-static void pasv_send_data(passive_t *pasv)
+int fill_buffer_from_fd(io_buffer_t *buffer, int fd)
 {
-  if(!pasv || !pasv->buffer)
-    return;
+  if(buffer->head > 0)
+    return buffer->head;
 
-  int result = write_buffered_data_to_fd(pasv->client_fd, pasv->buffer, 1500);
-  if(result < 0)
-    pasv->state = PASV_DONE;
+  int nread = read(fd, buffer->buffer, buffer->size);
+  if(nread >= 0)
+    buffer->head = nread;
+
+  return nread;
 }
 
-static void pasv_recv_data(passive_t *pasv)
+static void copy_data(int *to, int *from, data_channel_t *channel, int size)
 {
-  if(!pasv || !pasv->buffer)
+  int nwritten = 0;
+  int nread = 0;
+
+
+  if(to     == NULL ||
+       from == NULL ||
+    channel == NULL ||
+            *to < 0 ||
+          *from < 0)
     return;
 
-  int result = write_buffered_data_to_fd(pasv->file_fd, pasv->buffer, 512);
-  if(result < 0)
-    pasv->state = PASV_DONE;
+  nwritten = write_buffered_data_to_fd(*to, channel->buffer, size);
+  if(nwritten < 0)
+    goto error;
 
+  nread = fill_buffer_from_fd(channel->buffer, *from);
+
+  if(nread < 0)
+    goto error;
+
+  if(nread == 0)
+  {
+    close(*to);
+    close(*from);
+    *to = -1;
+    *from = -1;
+    channel->state = DTP_CLOSED;
+  }
+
+  return;
+
+  error:
+  channel->state = DTP_ERROR;
+}
+
+static void pasv_send_data(data_channel_t *channel)
+{
+  if(!channel || !channel->buffer)
+    return;
+
+  copy_data(&channel->remote_fd, &channel->local_fd, channel, 1500);
+}
+
+static void pasv_recv_data(data_channel_t *channel)
+{
+  if(!channel || !channel->buffer)
+    return;
+
+  copy_data(&channel->local_fd, &channel->remote_fd, channel, 512);
 }
 
 void passive_poll(void)
 {
-  passive_t *pasv = NULL;
+  data_channel_t *pasv = NULL;
 
   while(pasv_list != NULL)
   {
@@ -137,7 +184,7 @@ void passive_poll(void)
     }
 
     if(pasv->state == PASV_FREE)
-      free_passive(pasv);
+      free_passive_channel(pasv);
     else
     {
       pasv->next = next_pasv_list;
@@ -149,16 +196,16 @@ void passive_poll(void)
   next_pasv_list = NULL;
 }
 
-passive_t *new_passive(void)
+static data_channel_t *new_passive_channel(u32 ip, u16 port)
 {
-  passive_t *result = (passive_t *)malloc(sizeof(passive_t));
+  data_channel_t *result = (data_channel_t *)malloc(sizeof(data_channel_t));
   if(result != NULL)
   {
-    ACGetAssignedAddress(&result->ip);
-    result->port = get_pasv_port();
-    result->state = PASV_NONE;
-    result->client_fd = -1;
-    result->file_fd = -1;
+    result->ip = ip;
+    result->port = port;
+    result->state = DTP_PENDING;
+    result->local_fd = -1;
+    result->remote_fd = -1;
 
     if(result->ip == 0)
       goto error;
@@ -178,12 +225,12 @@ passive_t *new_passive(void)
 
   error:
   if(result)
-    free_passive(result);
+    free_passive_channel(result);
 
   return NULL;
 }
 
-void free_passive(passive_t *passive)
+static void free_passive_channel(data_channel_t *passive)
 {
   if(passive)
   {
@@ -194,15 +241,15 @@ void free_passive(passive_t *passive)
       socketclose(passive->listen_fd);
       passive->listen_fd = -1;
     }
-    if(passive->client_fd >= 0)
+    if(passive->remote_fd >= 0)
     {
-      socketclose(passive->client_fd);
-      passive->client_fd = -1;
+      socketclose(passive->remote_fd);
+      passive->remote_fd = -1;
     }
-    if(passive->file_fd)
+    if(passive->local_fd)
     {
-      close(passive->file_fd);
-      passive->file_fd = -1;
+      close(passive->local_fd);
+      passive->local_fd = -1;
     }
     if(passive->buffer)
     {
@@ -214,3 +261,8 @@ void free_passive(passive_t *passive)
     free(passive);
   }
 }
+
+data_interface_t passive = {
+  new_passive_channel,
+  free_passive_channel
+};

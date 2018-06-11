@@ -4,6 +4,9 @@
 #include "network.h"
 #include "iobuffer.h"
 #include "wiiu/ac.h"
+
+static unsigned next_ephermal_port = 1024;
+
 /*
  * Tell the Wii U to connect to its default network profile, then init the socket library.
  */
@@ -13,6 +16,25 @@ void network_init(void)
   ACConnect();
 
   socket_lib_init();
+}
+
+u32 network_get_host_ip(void)
+{
+  u32 ip = 0;
+
+  ACGetAssignedAddress(&ip);
+  return ip;
+}
+
+u16 network_get_ephermal_port(void)
+{
+  u16 result = next_ephermal_port;
+
+  next_ephermal_port++;
+  if(next_ephermal_port > 65535)
+    next_ephermal_port = 1024;
+
+  return result;
 }
 
 static int setup_server_socket(void)
