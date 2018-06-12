@@ -25,14 +25,22 @@ struct data_channel {
   u16 port;
 
   io_buffer_t *buffer;
+  data_interface_t *iface;
 };
 
 struct data_interface {
   data_channel_t *(*new)(u32 ip, u16 port);
   void (*free)(data_channel_t *);
+  void (*accept)(data_channel_t *);
+  bool (*is_connected)(data_channel_t *);
+  void (*send)(data_channel_t *);
+  void (*recv)(data_channel_t *);
 };
+
+void dtp_poll(void);
 
 extern data_interface_t passive;
 extern data_interface_t active;
+extern data_interface_t base;
 
 #endif /* _DTP_H */

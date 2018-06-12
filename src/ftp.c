@@ -11,7 +11,7 @@
 #include "commands.h"
 #include "network.h"
 #include "ftp.h"
-#include "dtp/passive.h"
+#include "dtp/dtp.h"
 
 #define MAX_CLIENTS 25
 #define FTP_BUFFER 1024
@@ -252,7 +252,7 @@ int ftp_network_handler(int socket)
   if( network_accept_poll(socket, ftp_accept_handler, NULL) < 0 )
     return -1;
 
-  passive_poll();
+  dtp_poll();
 
   for(i = 0; i < MAX_CLIENTS; i++)
     handle_client(clients[i]);

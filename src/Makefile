@@ -41,6 +41,7 @@ OBJ += commands.o
 OBJ += console.o
 OBJ += logging.o
 OBJ += main.o
+OBJ += dtp/dtp.o
 OBJ += dtp/passive.o
 OBJ += dtp/active.o
 OBJ += hbl.o
@@ -49,6 +50,33 @@ OBJ += fs/fs_utils.o
 OBJ += system/memory.o
 OBJ += system/exception_handler.o
 OBJ += system/missing_libc_functions.o
+OBJ += commands/allo.o
+OBJ += commands/appe.o
+OBJ += commands/cdup.o
+OBJ += commands/cwd.o
+OBJ += commands/dele.o
+OBJ += commands/list.o
+OBJ += commands/mkd.o
+OBJ += commands/mode.o
+OBJ += commands/nlst.o
+OBJ += commands/noop.o
+OBJ += commands/pass.o
+OBJ += commands/pasv.o
+OBJ += commands/port.o
+OBJ += commands/pwd.o
+OBJ += commands/quit.o
+OBJ += commands/rein.o
+OBJ += commands/rest.o
+OBJ += commands/retr.o
+OBJ += commands/rmd.o
+OBJ += commands/rnfr.o
+OBJ += commands/rnto.o
+OBJ += commands/site.o
+OBJ += commands/size.o
+OBJ += commands/stor.o
+OBJ += commands/syst.o
+OBJ += commands/type.o
+OBJ += commands/user.o
 
 OBJ := $(addprefix $(BUILD_DIR)/, $(OBJ))
 
@@ -146,3 +174,4 @@ clean:
 	rm -f $(OBJ:.o=.depend) $(RPX_OBJ:.o=.depend) $(HBL_ELF_OBJ:.o=.depend)
 
 -include $(OBJ:.o=.depend) $(RPX_OBJ:.o=.depend) $(HBL_ELF_OBJ:.o=.depend)
+
