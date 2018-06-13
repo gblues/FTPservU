@@ -271,9 +271,11 @@ client_t *new_client(void)
 
   client->input_buffer = new_buffer(FTP_BUFFER);
   client->output_buffer = new_buffer(FTP_BUFFER);
-  client->cwd[0] = '/';
+  client->cwd = new_vfs_path("/");
 
-  if(client->input_buffer == NULL || client->output_buffer == NULL)
+  if(client->input_buffer == NULL  ||
+     client->output_buffer == NULL ||
+     client->cwd == NULL)
     goto error;
 
   return client;
@@ -301,6 +303,11 @@ void free_client(client_t *client)
     if(client->output_buffer) {
       free_buffer(client->output_buffer);
       client->output_buffer = NULL;
+    }
+
+    if(client->cwd) {
+      free_vfs_path(client->cwd);
+      client->cwd = NULL;
     }
 
     free(client);

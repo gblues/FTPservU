@@ -6,6 +6,7 @@
 #include "iobuffer.h"
 #include "commands.h"
 #include "dtp/dtp.h"
+#include "vfs/vfs.h"
 #include "ftpservu_types.h"
 
 #define STATE_NONE 0x00000000 /* initial state */
@@ -26,7 +27,7 @@ struct client_struct {
   io_buffer_t *output_buffer;
   data_channel_t *data;
 
-  uint8_t cwd[PATH_MAX];
+  vfs_path_t *cwd;
 };
 
 int ftp_network_handler(int socket);
