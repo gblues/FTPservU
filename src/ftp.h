@@ -9,12 +9,13 @@
 #include "vfs/vfs.h"
 #include "ftpservu_types.h"
 
-#define STATE_NONE 0x00000000 /* initial state */
-#define STATE_USER 0x00000001 /* USER has been provided */
-#define STATE_AUTH 0x00000002 /* client is authenticated */
-#define STATE_RNFR 0x00000004 /* client sent RNFR */
-#define STATE_DATA 0x00000008 /* data transfer in progress */
-#define STATE_DISCONN 0x0000010 /* client logged out */
+#define STATE_NONE     0x00000000 /* initial state */
+#define STATE_USER     0x00000001 /* USER has been provided */
+#define STATE_AUTH     0x00000002 /* client is authenticated */
+#define STATE_RNFR     0x00000004 /* client sent RNFR */
+#define STATE_DATA     0x00000008 /* data transfer in progress */
+#define STATE_DISCONN  0x00000010 /* client logged out */
+#define STATE_LOCAL_FD 0x00010000 /* local_fd is a FD */
 
 #define IS_AUTHENTICATED(client) (client->state >= STATE_AUTH)
 
@@ -34,5 +35,6 @@ int ftp_network_handler(int socket);
 void ftp_deinit(void);
 
 void ftp_response(int code, client_t *client, const char *msg);
+void ftp_responsef(int code, client_t *client, const char *fmt, ...);
 
 #endif /* _FTP_H */

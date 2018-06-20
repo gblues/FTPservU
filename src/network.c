@@ -194,3 +194,8 @@ int network_writeln(int socket, char *line)
 
   return nwritten;
 }
+
+s32 network_connect(u32 remote_ip, u16 remote_port)
+{
+  return -1;
+}

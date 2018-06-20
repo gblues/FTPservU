@@ -314,6 +314,21 @@ void free_client(client_t *client)
   }
 }
 
+void ftp_responsef(int code, client_t *client, const char *fmt, ...)
+{
+  char *formatted;
+  va_list va;
+  va_start(va, fmt);
+
+  vasprintf(&formatted, fmt, va);
+
+  if(formatted != NULL) {
+    ftp_response(code, client, formatted);
+    free(formatted);
+  }
+  va_end(va);
+}
+
 void ftp_response(int code, client_t *client, const char *msg)
 {
   char *response = NULL;

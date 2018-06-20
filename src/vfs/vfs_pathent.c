@@ -6,8 +6,6 @@
 
 #include "vfs.h"
 
-static vfs_pathent_t *new_vfs_pathent(char *entity);
-
 static char *skip_separator(char *path)
 {
   if(path == NULL)
@@ -90,7 +88,7 @@ vfs_pathent_t *vfs_pathent_parse(char *path)
     return NULL;
 }
 
-static vfs_pathent_t *new_vfs_pathent(char *entity)
+vfs_pathent_t *new_vfs_pathent(char *entity)
 {
   if(entity == NULL)
     return NULL;

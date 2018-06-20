@@ -29,16 +29,16 @@ static void pasv_accept_handler(int fd, struct sockaddr_in *sockaddr, socklen_t 
   pasv->listen_fd = -1;
 
   pasv->remote_fd = fd;
-  pasv->state = DTP_ESTABLISHED;
+  SET_STATE(pasv, DTP_ESTABLISHED);
 }
 
 static void pasv_try_accept(data_channel_t *channel)
 {
-  if(!channel || channel->state != DTP_PENDING)
+  if(!channel || GET_STATE(channel) != DTP_PENDING)
     return;
 
   if( network_accept_poll(channel->listen_fd, pasv_accept_handler, channel) < 0 )
-    channel->state = DTP_ERROR;
+    SET_STATE(channel, DTP_ERROR);
 }
 
 static data_channel_t *new_passive_channel(u32 ip, u16 port)
@@ -72,9 +72,17 @@ static void free_passive_channel(data_channel_t *channel)
   base.free(channel);
 }
 
+/*
+ * We always return true here because this is primarily used
+ * by data commands to detect if a 4xx response needs to be sent--
+ * which is generally only in active mode.
+ *
+ * In a real FTP server, it will wait forever for something to
+ * connect to the PASV port.
+ */
 static bool pasv_is_connected(data_channel_t *channel)
 {
-  return channel->state == DTP_ESTABLISHED && channel->remote_fd >= 0;
+  return true;
 }
 
 data_interface_t passive = {

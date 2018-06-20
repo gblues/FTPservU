@@ -16,5 +16,6 @@ int network_read_buffer(int socket, io_buffer_t *buffer);
 int network_writeln(int socket, char *line);
 u32 network_get_host_ip(void);
 u16 network_get_ephermal_port(void);
+s32 network_connect(u32 remote_ip, u16 remote_port);
 
 #endif /* _NETWORK_H */

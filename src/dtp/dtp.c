@@ -82,13 +82,13 @@ static void dtp_copy_data(int *to, int *from, data_channel_t *channel, int size)
     close(*from);
     *to = -1;
     *from = -1;
-    channel->state = DTP_CLOSED;
+    SET_STATE(channel, DTP_CLOSED);
   }
 
   return;
 
   error:
-  channel->state = DTP_ERROR;
+  SET_STATE(channel, DTP_ERROR);
 }
 
 static void dtp_send_data(data_channel_t *channel)
@@ -96,7 +96,7 @@ static void dtp_send_data(data_channel_t *channel)
   if(!channel || !channel->buffer)
     return;
 
-  dtp_copy_data(&channel->remote_fd, &channel->local_fd, channel, 1500);
+  dtp_copy_data(&channel->remote_fd, &channel->local.fd, channel, 1500);
 }
 
 static void dtp_receive_data(data_channel_t *channel)
@@ -104,7 +104,7 @@ static void dtp_receive_data(data_channel_t *channel)
   if(!channel || !channel->buffer)
     return;
 
-  dtp_copy_data(&channel->local_fd, &channel->remote_fd, channel, 512);
+  dtp_copy_data(&channel->local.fd, &channel->remote_fd, channel, 512);
 }
 
 static void dtp_try_accept(data_channel_t *channel)
@@ -121,20 +121,20 @@ void dtp_poll(void)
     dtp = dtp_list;
     dtp_list = dtp->next;
 
-    switch(dtp->state)
+    switch(GET_STATE(dtp))
     {
       case DTP_PENDING:
         dtp->iface->accept(dtp);
         break;
-      case DTP_XMIT:
+      case DTP_SENDING:
         dtp->iface->send(dtp);
         break;
-      case DTP_RECV:
+      case DTP_RECVING:
         dtp->iface->recv(dtp);
         break;
     }
 
-    if(dtp->state == DTP_FREE)
+    if(GET_STATE(dtp) == DTP_FREE)
       dtp->iface->free(dtp);
     else
     {
@@ -155,7 +155,7 @@ data_channel_t *new_data_channel(u32 ip, u16 port)
     result->ip = ip;
     result->port = port;
     result->state = DTP_PENDING;
-    result->local_fd = -1;
+    result->local.fd = -1;
     result->remote_fd = -1;
 
     if(result->ip == 0)
@@ -184,6 +184,18 @@ void free_data_channel(data_channel_t *channel)
   {
     channel->next = NULL;
 
+    if(channel->state & DTP_LOCAL_BUF)
+    {
+      if(channel->local.buffer) {
+        free(channel->local.buffer);
+        channel->local.buffer = NULL;
+      }
+    } else {
+      if(channel->local.fd >= 0) {
+        close(channel->local.fd);
+        channel->local.fd = -1;
+      }
+    }
     if(channel->listen_fd >= 0)
     {
       socketclose(channel->listen_fd);
@@ -194,11 +206,6 @@ void free_data_channel(data_channel_t *channel)
       socketclose(channel->remote_fd);
       channel->remote_fd = -1;
     }
-    if(channel->local_fd)
-    {
-      close(channel->local_fd);
-      channel->local_fd = -1;
-    }
     if(channel->buffer)
     {
       free_buffer(channel->buffer);
@@ -208,6 +215,31 @@ void free_data_channel(data_channel_t *channel)
     channel->ip = 0;
     free(channel);
   }
+}
+
+int dtp_send_buffer(data_channel_t *channel, char *buffer)
+{
+  if(channel->local.fd == -1)
+  {
+    channel->local.buffer = buffer;
+    channel->state |= (DTP_LOCAL_BUF | DTP_XMIT);
+    return 0;
+  }
+
+  return -1;
+}
+
+int dtp_send_file(data_channel_t *channel, int fd)
+{
+  if(channel->local.fd == -1)
+  {
+    channel->local.fd = fd;
+    channel->state &= ~DTP_LOCAL_BUF;
+    channel->state |= DTP_XMIT;
+    return 0;
+  }
+
+  return -1;
 }
 
 data_interface_t base = {

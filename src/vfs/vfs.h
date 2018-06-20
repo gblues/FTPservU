@@ -35,11 +35,21 @@ struct vfs_path {
 };
 
 vfs_pathent_t *vfs_pathent_parse(char *path);
-void vfs_pathent_free(vfs_pathent_t *entity);
+
 vfs_node_t *new_vfs_node(void);
 int free_vfs_node(vfs_node_t *node);
+
 vfs_path_t *new_vfs_path(char *path);
 void free_vfs_path(vfs_path_t *path);
+
+vfs_pathent_t *new_vfs_pathent(char *name);
 void free_vfs_pathent(vfs_pathent_t *entity);
+
+bool vfs_can_chdir(vfs_path_t *path);
+vfs_path_t *vfs_path_merge(vfs_path_t *old, vfs_path_t *new);
+vfs_path_t *vfs_path_clone(vfs_path_t *path);
+void vfs_path_resolve(vfs_path_t *path);
+char *vfs_path_acquire(vfs_path_t *path);
+char *vfs_list_directory(vfs_path_t *dir);
 
 #endif /* _VFS_H */

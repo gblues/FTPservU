@@ -4,6 +4,7 @@
 
 #include "dtp.h"
 #include "iobuffer.h"
+#include "network.h"
 
 static data_channel_t *new_active_channel(u32 ip, u16 port)
 {
@@ -31,10 +32,16 @@ static void active_receive_data(data_channel_t *channel)
 
 static bool active_is_connected(data_channel_t *channel)
 {
-  if(channel->state = DTP_ESTABLISHED && channel->remote_fd >= 0)
+  if(GET_STATE(channel) == DTP_ESTABLISHED && channel->remote_fd >= 0)
     return true;
 
-  /* TODO: attempt to connect to channel->ip on channel->port) */
+  channel->remote_fd = network_connect(channel->ip, channel->port);
+  if(channel->remote_fd >= 0)
+  {
+    SET_STATE(channel, DTP_ESTABLISHED);
+    return true;
+  }
+
   return false;
 }
 
