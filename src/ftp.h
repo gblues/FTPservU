@@ -36,5 +36,6 @@ void ftp_deinit(void);
 
 void ftp_response(int code, client_t *client, const char *msg);
 void ftp_responsef(int code, client_t *client, const char *fmt, ...);
+void ftp_data_send_buffer(client_t *client, char *buffer);
 
 #endif /* _FTP_H */

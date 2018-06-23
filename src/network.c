@@ -34,6 +34,8 @@ u16 network_get_ephermal_port(void)
   if(next_ephermal_port > 65535)
     next_ephermal_port = 1024;
 
+  printf("[network]: returned ephermal port %d\n", result);
+
   return result;
 }
 
@@ -88,6 +90,8 @@ int network_create_serversocket(int port, int backlog)
   int result = -1;
   int errno = 0;
 
+  printf("[network]: attempting to create server socket for port %d with connect backlog of %d\n", port, backlog);
+
   socket = setup_server_socket();
   if(socket < 0) return -1;
 
@@ -114,7 +118,6 @@ int network_accept_poll(int socket, accept_cb callback, void *userptr)
 {
   struct sockaddr_in client;
   socklen_t len = sizeof(client);
-
   bool socketqueue_exhausted = false;
   int errno;
 
@@ -124,24 +127,26 @@ int network_accept_poll(int socket, accept_cb callback, void *userptr)
     return -1;
   }
 
-  do {
-    memset(&client, 0, sizeof(client));
-    int fd = accept(socket, (struct sockaddr *)&client, &len);
-    if(fd < 0)
-    {
-      errno = socketlasterr();
-      if( errno == EAGAIN || errno == EWOULDBLOCK )
-        socketqueue_exhausted = true;
-      else
-      {
-        console_printf("FATAL: accept failed (%d)", errno);
-        return -1;
-      }
-    } else {
-      callback(fd, &client, len, userptr);
-    }
-  } while(!socketqueue_exhausted);
+  printf("[network] accept poll\n");
 
+  memset(&client, 0, sizeof(client));
+  printf("socket: %d, len: %d\n", socket, len);
+  int fd = accept(socket, (struct sockaddr *)&client, &len);
+  if(fd < 0)
+  {
+    errno = socketlasterr();
+    if( errno == EAGAIN || errno == EWOULDBLOCK )
+      return 0;
+    else
+    {
+      console_printf("FATAL: accept failed (%d)", errno);
+      return -1;
+    }
+  }
+
+  callback(fd, &client, len, userptr);
+
+  printf("[network] done network polling\n");
   return 0;
 }
 

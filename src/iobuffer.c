@@ -1,12 +1,29 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <malloc.h>
 #include <string.h>
 
 #include "iobuffer.h"
 
+static int sizeAlign(int size, int multipleOf)
+{
+  int remainder = size % multipleOf;
+
+  size += (multipleOf - remainder);
+
+  return size;
+}
+
+/*
+ * Create a new I/O buffer. It is guaranteed to have
+ * at least `size` bytes available, but will be rounded
+ * up to optimize cache performance.
+ */
 io_buffer_t *new_buffer(int size)
 {
   io_buffer_t *result;
+
+  size = sizeAlign(size, 64);
 
   result = (io_buffer_t *)malloc(sizeof(io_buffer_t));
   if(result == NULL)
@@ -14,7 +31,7 @@ io_buffer_t *new_buffer(int size)
 
   memset(result, 0, sizeof(io_buffer_t));
 
-  result->buffer = (uint8_t *)malloc(size);
+  result->buffer = (uint8_t *)memalign(64, size);
   result->line = (uint8_t *)malloc(size);
   if(result->buffer == NULL || result->line == NULL)
     goto error;

@@ -26,15 +26,18 @@ static void handle_data_events(client_t *client)
   if(!client || !(client->state & STATE_DATA))
     return;
 
+  printf("[ftp]: handle_data_events\n");
+
   if(client->data == NULL)
   {
     client->state &= ~STATE_DATA;
     return;
   }
 
-  if(client->data->state >= DTP_CLOSED)
+  int data_state = GET_STATE(client->data);
+  if(data_state >= DTP_CLOSED)
   {
-    switch(client->data->state)
+    switch(data_state)
     {
       case DTP_CLOSED:
         ftp_response(226, client, "Transfer complete.");
@@ -44,7 +47,7 @@ static void handle_data_events(client_t *client)
         break;
     }
 
-    client->data->state = DTP_FREE;
+    SET_STATE(client->data, DTP_FREE);
     client->data = NULL;
     client->state &= ~STATE_DATA;
   }
@@ -252,11 +255,14 @@ int ftp_network_handler(int socket)
   if( network_accept_poll(socket, ftp_accept_handler, NULL) < 0 )
     return -1;
 
+  printf("[ftp]: Polling data connections...\n");
   dtp_poll();
 
+  printf("[ftp]: Polling control connections...\n");
   for(i = 0; i < MAX_CLIENTS; i++)
     handle_client(clients[i]);
 
+  printf("[ftp]: Polling done\n");
   return 0;
 }
 
@@ -336,5 +342,21 @@ void ftp_response(int code, client_t *client, const char *msg)
   if(response != NULL) {
     iobuffer_append(client->output_buffer, response, strlen(response));
     free(response);
+  }
+}
+
+void ftp_data_send_buffer(client_t *client, char *buffer)
+{
+  client->state |= STATE_DATA;
+  dtp_channel_init(&(client->data), client->ip, client->port);
+
+  if(client->data == NULL) {
+    printf("[ftp]: Failed to create data channel.\n");
+    return;
+  }
+
+  if( !client->data->iface->is_connected(client->data) ||
+       dtp_send_buffer(client->data, buffer) < 0 ) {
+    ftp_response(425, client, "Failed to connect to client");
   }
 }

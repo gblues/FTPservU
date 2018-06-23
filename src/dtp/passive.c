@@ -43,6 +43,7 @@ static void pasv_try_accept(data_channel_t *channel)
 
 static data_channel_t *new_passive_channel(u32 ip, u16 port)
 {
+  printf("[passive] new_passive_channel\n");
   data_channel_t *result = base.new(ip, port);
   if(result != NULL)
   {
@@ -50,6 +51,7 @@ static data_channel_t *new_passive_channel(u32 ip, u16 port)
     if(result->listen_fd < 0)
       goto error;
   }
+  result->iface = &passive;
   return result;
 
   error:

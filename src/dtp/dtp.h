@@ -6,11 +6,11 @@
 
 #define DTP_PENDING       0 // result of either a PORT or PASV command
 #define DTP_ESTABLISHED   1 // TCP/IP connection has been established
+#define DTP_SENDING       2 // is sending
+#define DTP_RECVING       3 // is receiving
 /* states DTP_CLOSED or higher mean the connection is dead.
    new states go above here, and then renumber so that these
    are always highest. */
-#define DTP_SENDING       2 // is sending
-#define DTP_RECVING       3 // is receiving
 #define DTP_CLOSED        4 // file transfer is complete
 #define DTP_ERROR         5 // a TCP/IP error occurred on the connection
 #define DTP_FREE          6 // references are cleaned up; ready to free
@@ -48,6 +48,7 @@ struct data_interface {
 
 void dtp_poll(void);
 int dtp_send_buffer(data_channel_t *channel, char *buffer);
+void dtp_channel_init(data_channel_t **pchannel, u32 ip, u16 port);
 
 extern data_interface_t passive;
 extern data_interface_t active;

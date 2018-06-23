@@ -69,6 +69,7 @@ void command_invoke(client_t *client, char *mnemonic, char *parameter)
     return;
   }
 
+  printf("[commands]: invoking %s\n", mnemonic);
   cmd->func(client, parameter);
+  printf("[commands]: done invoking %s\n", mnemonic);
 }
-

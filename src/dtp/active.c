@@ -8,7 +8,10 @@
 
 static data_channel_t *new_active_channel(u32 ip, u16 port)
 {
-  return base.new(ip, port);
+  data_channel_t *result = base.new(ip, port);
+  result->iface = &active;
+
+  return result;
 }
 
 static void free_active_channel(data_channel_t *channel)

@@ -112,39 +112,82 @@ static void dtp_try_accept(data_channel_t *channel)
   (void *)channel;
 }
 
+/*
+ * Determine if we're ready to start the data transfer.
+ * I really hate how stateful FTP is.
+ */
+static void dtp_check_ready(data_channel_t *channel)
+{
+  if( GET_STATE(channel) != DTP_ESTABLISHED )
+    return;
+
+  if( (channel->state & DTP_RECV) )
+    SET_STATE(channel, DTP_RECVING);
+  if( (channel->state & DTP_XMIT) )
+    SET_STATE(channel, DTP_SENDING);
+}
+
 void dtp_poll(void)
 {
   data_channel_t *dtp = NULL;
+  int count = 0;
 
   while(dtp_list != NULL)
   {
+    count++;
     dtp = dtp_list;
     dtp_list = dtp->next;
+    dtp->next = NULL;
+    printf("[dtp]: processing data connection %d\n", count);
 
     switch(GET_STATE(dtp))
     {
       case DTP_PENDING:
+        printf("Data connection is PENDING, trying accept\n");
         dtp->iface->accept(dtp);
         break;
+      case DTP_ESTABLISHED:
+        printf("Data connection is ESTABLISHED, checking if we're ready to start data transfer\n");
+        dtp_check_ready(dtp);
+        break;
       case DTP_SENDING:
+        printf("Data connection is SENDING, sending a packet\n");
         dtp->iface->send(dtp);
         break;
       case DTP_RECVING:
+        printf("Data connection is RECVING, receiving a packet\n");
         dtp->iface->recv(dtp);
+        break;
+      default:
+        printf("Data connection is %d, no-op\n", GET_STATE(dtp));
         break;
     }
 
     if(GET_STATE(dtp) == DTP_FREE)
-      dtp->iface->free(dtp);
-    else
     {
+      printf("Data connection is ready to be freed. Be free!\n");
+      dtp->iface->free(dtp);
+    } else {
       dtp->next = next_dtp_list;
       next_dtp_list = dtp;
     }
   }
 
+  printf("[dtp]: finished polling %d data channels\n", count);
   dtp_list = next_dtp_list;
   next_dtp_list = NULL;
+}
+
+/*
+ * Used to initialize a channel pointer if it's not already set.
+ */
+void dtp_channel_init(data_channel_t **pchannel, u32 ip, u16 port)
+{
+  if(pchannel == NULL)
+    return;
+
+  if(*pchannel == NULL)
+    *pchannel = active.new(ip, port);
 }
 
 data_channel_t *new_data_channel(u32 ip, u16 port)
