@@ -6,6 +6,7 @@
 
 #include "console.h"
 #include "iobuffer.h"
+#include "ftp.h"
 #include "dtp.h"
 #include "network.h"
 #include "wiiu/ac.h"
@@ -24,13 +25,14 @@ static int dtp_write_buffered_data_to_fd(int fd, io_buffer_t *buffer, int packet
     packetSize = buffer->head;
 
   nwritten = write(fd, buffer->buffer, packetSize);
+  printf("[dtp]: write(%d, %08x, %d) = %d\n", fd, buffer->buffer, packetSize, nwritten);
 
   if(nwritten < 0)
   {
     int errno = socketlasterr();
     if(errno != EAGAIN)
     {
-      printf("[passive]: error writing data to client: %d\n", errno);
+      printf("[dtp]: error writing data to client: %d\n", errno);
       return -errno;
     }
     return 0;
@@ -53,6 +55,30 @@ static int dtp_fill_buffer_from_fd(io_buffer_t *buffer, int fd)
 
   return nread;
 }
+
+static void dtp_copy_buffer_data(int *to, iobuffer_t **from, data_channel_t *channel, int size)
+{
+  if( to == NULL || from == NULL || channel == NULL ||
+      *to < 0 || *from == NULL || size <= 0 )
+    return;
+
+  nwritten = dtp_write_buffered_data_to_fd(*to, *from, size);
+  if(nwritten < 0)
+    goto error;
+
+  *from += nwritten;
+  if(strlen(*from) == 0) {
+    close(*to);
+    *to = -1;
+    
+  }
+
+  return;
+
+  error:
+  
+}
+
 
 static void dtp_copy_data(int *to, int *from, data_channel_t *channel, int size)
 {
@@ -96,7 +122,10 @@ static void dtp_send_data(data_channel_t *channel)
   if(!channel || !channel->buffer)
     return;
 
-  dtp_copy_data(&channel->remote_fd, &channel->local.fd, channel, 1500);
+  if(channel->state & DTP_LOCAL_BUF) {
+    dtp_copy_buffer_data(&channel->remote_fd, &channel->local.buffer, channel, 1500);
+  else
+    dtp_copy_data(&channel->remote_fd, &channel->local.fd, channel, 1500);
 }
 
 static void dtp_receive_data(data_channel_t *channel)
@@ -118,9 +147,18 @@ static void dtp_try_accept(data_channel_t *channel)
  */
 static void dtp_check_ready(data_channel_t *channel)
 {
-  if( GET_STATE(channel) != DTP_ESTABLISHED )
+  if( GET_STATE(channel) != DTP_ESTABLISHED ) {
+    printf("[dtp]: check_ready: NOT READY, connection is not established.\n");
     return;
+  }
 
+  if(channel->client == NULL) {
+    printf("[dtp]: check_ready: NOT READY, null client\n");
+    return;
+  }
+
+  if( (channel->state & (DTP_RECV|DTP_XMIT)) )
+    ftp_response(150, channel->client, "Beginning data transfer.");
   if( (channel->state & DTP_RECV) )
     SET_STATE(channel, DTP_RECVING);
   if( (channel->state & DTP_XMIT) )
@@ -173,7 +211,6 @@ void dtp_poll(void)
     }
   }
 
-  printf("[dtp]: finished polling %d data channels\n", count);
   dtp_list = next_dtp_list;
   next_dtp_list = NULL;
 }
@@ -181,13 +218,15 @@ void dtp_poll(void)
 /*
  * Used to initialize a channel pointer if it's not already set.
  */
-void dtp_channel_init(data_channel_t **pchannel, u32 ip, u16 port)
+void dtp_channel_init(client_t *client, u32 ip, u16 port)
 {
-  if(pchannel == NULL)
+  if(client == NULL)
     return;
 
-  if(*pchannel == NULL)
-    *pchannel = active.new(ip, port);
+  if(client->data == NULL) {
+    client->data = active.new(ip, port);
+    client->data->client = client;
+  }
 }
 
 data_channel_t *new_data_channel(u32 ip, u16 port)

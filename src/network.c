@@ -127,10 +127,7 @@ int network_accept_poll(int socket, accept_cb callback, void *userptr)
     return -1;
   }
 
-  printf("[network] accept poll\n");
-
   memset(&client, 0, sizeof(client));
-  printf("socket: %d, len: %d\n", socket, len);
   int fd = accept(socket, (struct sockaddr *)&client, &len);
   if(fd < 0)
   {

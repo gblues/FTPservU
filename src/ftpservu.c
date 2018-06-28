@@ -35,22 +35,17 @@ void __mount_filesystems()
 
   if(iosuhaxMount)
   {
-    fatInitDefault();
-    fsa_fd = IOSUHAX_FSA_Open();
-
-    if(fsa_fd >= 0)
-    {
-      mount_fs("slccmpt01", fsa_fd, "/dev/slccmpt01", "/vol/storage_slccmpt01");
-      mount_fs("storage_odd_tickets", fsa_fd, "/dev/odd01", "/vol/storage_odd_tickets");
-      mount_fs("storage_odd_updates", fsa_fd, "/dev/odd02", "/vol/storage_odd_updates");
-      mount_fs("storage_odd_content", fsa_fd, "/dev/odd03", "/vol/storage_odd_content");
-      mount_fs("storage_odd_content2", fsa_fd, "/dev/odd04", "/vol/storage_odd_content2");
-      mount_fs("storage_slc", fsa_fd, NULL, "/vol/system");
-      mount_fs("storage_mlc", fsa_fd, NULL, "/vol/storage_mlc01");
-      mount_fs("storage_usb", fsa_fd, NULL, "/vol/storage_usb01");
-    }
+    vfs_fsa_init();
+    vfs_mount("slccmpt01", "/dev/slccmpt01", "/vol/storage_slccmpt01");
+    vfs_mount("storage_odd_tickets", "/dev/odd01", "/vol/storage_odd_tickets");
+    vfs_mount("storage_odd_updates", "/dev/odd02", "/vol/storage_odd_updates");
+    vfs_mount("storage_odd_content", "/dev/odd03", "/vol/storage_odd_content");
+    vfs_mount("storage_odd_content2", "/dev/odd04", "/vol/storage_odd_content2");
+    vfs_mount("storage_slc", NULL, "/vol/system");
+    vfs_mount("storage_mlc", NULL, "/vol/storage_mlc01");
+    vfs_mount("storage_usb", NULL, "/vol/storage_usb01");
   } else {
-    mount_sd_fat("sd");
+    vfs_mount_fat("sd");
   }
 
   fs_mounted = true;

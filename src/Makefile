@@ -50,6 +50,7 @@ OBJ += fs/fs_utils.o
 OBJ += vfs/vfs.o
 OBJ += vfs/vfs_path.o
 OBJ += vfs/vfs_pathent.o
+OBJ += vfs/vfs_volume.o
 OBJ += system/memory.o
 OBJ += system/exception_handler.o
 OBJ += system/missing_libc_functions.o

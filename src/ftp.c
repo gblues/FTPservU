@@ -255,14 +255,11 @@ int ftp_network_handler(int socket)
   if( network_accept_poll(socket, ftp_accept_handler, NULL) < 0 )
     return -1;
 
-  printf("[ftp]: Polling data connections...\n");
   dtp_poll();
 
-  printf("[ftp]: Polling control connections...\n");
   for(i = 0; i < MAX_CLIENTS; i++)
     handle_client(clients[i]);
 
-  printf("[ftp]: Polling done\n");
   return 0;
 }
 
@@ -348,7 +345,7 @@ void ftp_response(int code, client_t *client, const char *msg)
 void ftp_data_send_buffer(client_t *client, char *buffer)
 {
   client->state |= STATE_DATA;
-  dtp_channel_init(&(client->data), client->ip, client->port);
+  dtp_channel_init(client, client->ip, client->port);
 
   if(client->data == NULL) {
     printf("[ftp]: Failed to create data channel.\n");

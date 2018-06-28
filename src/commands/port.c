@@ -55,4 +55,5 @@ void do_port(client_t *client, char *args)
   }
 
   client->data = active.new(remote_ip, remote_port);
+  client->data->client = client;
 }

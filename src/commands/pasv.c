@@ -16,6 +16,7 @@ void do_passive(client_t *client, char *args)
     network_get_host_ip(),
     network_get_ephermal_port());
 
+  client->data->client = client;
   char *msg = NULL;
 
   asprintf(&msg, "Entering passive mode (%d,%d,%d,%d,%d,%d)",

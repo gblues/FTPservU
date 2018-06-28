@@ -16,7 +16,7 @@
 #define DTP_FREE          6 // references are cleaned up; ready to free
 #define DTP_RECV       0x20 // channel is receiving from remote
 #define DTP_XMIT       0x40 // channel is sending data to remote
-#define DTP_LOCAL_BUF  0x80 // 'local' is the buffer not the fd
+#define DTP_LOCAL_BUF  0x80 // local is a buffer, not a file
 
 #define GET_STATE(dtp) (dtp->state & 0x0F)
 #define SET_STATE(dtp, flag) ((dtp)->state = ((dtp)->state & DTP_LOCAL_BUF) | flag)
@@ -33,6 +33,7 @@ struct data_channel {
   u32 ip;
   u16 port;
 
+  client_t *client;
   io_buffer_t *buffer;
   data_interface_t *iface;
 };
@@ -48,7 +49,7 @@ struct data_interface {
 
 void dtp_poll(void);
 int dtp_send_buffer(data_channel_t *channel, char *buffer);
-void dtp_channel_init(data_channel_t **pchannel, u32 ip, u16 port);
+void dtp_channel_init(client_t *client, u32 ip, u16 port);
 
 extern data_interface_t passive;
 extern data_interface_t active;
