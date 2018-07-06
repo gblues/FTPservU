@@ -35,11 +35,11 @@ static void active_receive_data(data_channel_t *channel)
 
 static bool active_is_connected(data_channel_t *channel)
 {
-  if(GET_STATE(channel) == DTP_ESTABLISHED && channel->remote_fd >= 0)
+  if(GET_STATE(channel) == DTP_ESTABLISHED && channel->remote != NULL)
     return true;
 
-  channel->remote_fd = network_connect(channel->ip, channel->port);
-  if(channel->remote_fd >= 0)
+  channel->remote = new_xfer_socket(network_connect(channel->ip, channel->port));
+  if(channel->remote != NULL)
   {
     SET_STATE(channel, DTP_ESTABLISHED);
     return true;

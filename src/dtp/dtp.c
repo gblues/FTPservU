@@ -14,128 +14,59 @@
 static data_channel_t *dtp_list = NULL;
 static data_channel_t *next_dtp_list = NULL;
 
-static int dtp_write_buffered_data_to_fd(int fd, io_buffer_t *buffer, int packetSize)
+static void dtp_shutdown(data_channel_t *channel, int state)
 {
-  int nwritten = 0;
+  if( channel->local != NULL) {
+    channel->local->iface->free(channel->local);
+    channel->local = NULL;
+  }
 
-  if(fd < 0 || buffer == NULL || packetSize < 0)
+  if(channel->remote != NULL) {
+    channel->remote->iface->free(channel->remote);
+    channel->remote = NULL;
+  }
+
+  SET_STATE(channel, state);
+}
+
+static int dtp_fill_buffer(io_buffer_t *buffer, xfer_t *src)
+{
+  if(buffer == NULL || src == NULL)
     return -1;
 
-  if(packetSize > buffer->head)
-    packetSize = buffer->head;
-
-  nwritten = write(fd, buffer->buffer, packetSize);
-  printf("[dtp]: write(%d, %08x, %d) = %d\n", fd, buffer->buffer, packetSize, nwritten);
-
-  if(nwritten < 0)
-  {
-    int errno = socketlasterr();
-    if(errno != EAGAIN)
-    {
-      printf("[dtp]: error writing data to client: %d\n", errno);
-      return -errno;
-    }
-    return 0;
-  }
-
-  memmove(buffer->buffer, buffer->buffer+nwritten, buffer->size - nwritten);
-  buffer->head -= nwritten;
-
-  return nwritten;
+  src->iface->fill_buffer(buffer, src->data);
+  return 0;
 }
 
-static int dtp_fill_buffer_from_buffer(io_buffer_t *buffer, char *src) {
-  if(buffer->head > 0)
-  return buffer->head;
-
-  int srclen = strlen(src);
-  if(srclen < buffer->size) {
-    strcpy(buffer->buffer, src);
-    buffer->head = srclen;
-
-    return srclen;
-  } else {
-    strncpy(buffer->buffer, src, buffer->size);
-    memmove(src, src+buffer->size, srclen-buffer->size);
-    return buffer->size;
-  }
-}
-
-static int dtp_fill_buffer_from_fd(io_buffer_t *buffer, int fd)
+/*
+ * Copy up to size bytes from the input source ('from') to the output ('to')
+ */
+static void dtp_copy_data(xfer_t **to, xfer_t **from, data_channel_t *channel, int size)
 {
-  if(buffer->head > 0)
-    return buffer->head;
-
-  int nread = read(fd, buffer->buffer, buffer->size);
-  if(nread >= 0)
-    buffer->head = nread;
-
-  return nread;
-}
-
-static void dtp_copy_buffer_data(int *to, char **from, data_channel_t *channel, int packetSize)
-{
-  int nwritten = 0;
-  int nread = 0;
-  if( to == NULL || from == NULL || channel == NULL ||
-      *to < 0 || *from == NULL || packetSize <= 0 )
-    return;
-
-  if( (nread = dtp_fill_buffer_from_buffer(channel->buffer, *from)) < 0)
-    goto error;
-
-  if(nread == 0) {
-    close(*to);
-    *to = -1;
-    SET_STATE(channel, DTP_CLOSED);
-  }
-
-  nwritten = dtp_write_buffered_data_to_fd(*to, channel->buffer, packetSize);
-  if(nwritten < 0)
-    goto error;
-
-  return;
-
-  error:
-  SET_STATE(channel, DTP_ERROR);
-}
-
-
-static void dtp_copy_data(int *to, int *from, data_channel_t *channel, int size)
-{
-  int nwritten = 0;
-  int nread = 0;
-
-
-  if(to     == NULL ||
+  if(    to == NULL ||
+        *to == NULL ||
        from == NULL ||
+      *from == NULL ||
     channel == NULL ||
-            *to < 0 ||
-          *from < 0)
+       size <= 0)
     return;
 
-  nread = dtp_fill_buffer_from_fd(channel->buffer, *from);
+  dtp_fill_buffer(channel->buffer, *from);
 
-  if(nread < 0)
-    goto error;
-
-  if(nread == 0)
-  {
-    close(*to);
-    close(*from);
-    *to = -1;
-    *from = -1;
-    SET_STATE(channel, DTP_CLOSED);
+  if(channel->buffer->head == 0) {
+    dtp_shutdown(channel, DTP_CLOSED);
+    return;
   }
 
-  nwritten = dtp_write_buffered_data_to_fd(*to, channel->buffer, size);
+  int nwritten = (*to)->iface->write_buffer(channel->buffer, (*to)->data, size);
+
   if(nwritten < 0)
     goto error;
 
   return;
 
   error:
-  SET_STATE(channel, DTP_ERROR);
+    dtp_shutdown(channel, DTP_ERROR);
 }
 
 static void dtp_send_data(data_channel_t *channel)
@@ -143,10 +74,7 @@ static void dtp_send_data(data_channel_t *channel)
   if(!channel || !channel->buffer)
     return;
 
-  if(channel->state & DTP_LOCAL_BUF)
-    dtp_copy_buffer_data(&channel->remote_fd, &channel->local.buffer, channel, 1500);
-  else
-    dtp_copy_data(&channel->remote_fd, &channel->local.fd, channel, 1500);
+  dtp_copy_data(&channel->remote, &channel->local, channel, 1500);
 }
 
 static void dtp_receive_data(data_channel_t *channel)
@@ -154,7 +82,7 @@ static void dtp_receive_data(data_channel_t *channel)
   if(!channel || !channel->buffer)
     return;
 
-  dtp_copy_data(&channel->local.fd, &channel->remote_fd, channel, 512);
+//  dtp_copy_data(&channel->local.fd, &channel->remote, channel, 512);
 }
 
 static void dtp_try_accept(data_channel_t *channel)
@@ -258,8 +186,8 @@ data_channel_t *new_data_channel(u32 ip, u16 port)
     result->ip = ip;
     result->port = port;
     result->state = DTP_PENDING;
-    result->local.fd = -1;
-    result->remote_fd = -1;
+    result->local = NULL;
+    result->remote = NULL;
 
     if(result->ip == 0)
       goto error;
@@ -287,28 +215,21 @@ void free_data_channel(data_channel_t *channel)
   {
     channel->next = NULL;
 
-    if(channel->state & DTP_LOCAL_BUF)
-    {
-      if(channel->local.buffer) {
-        free(channel->local.buffer);
-        channel->local.buffer = NULL;
-      }
-    } else {
-      if(channel->local.fd >= 0) {
-        close(channel->local.fd);
-        channel->local.fd = -1;
-      }
+    if(channel->local != NULL) {
+      channel->local->iface->free(channel->local);
+      channel->local = NULL;
     }
+    if(channel->remote != NULL) {
+      channel->remote->iface->free(channel->remote);
+      channel->remote = NULL;
+    }
+
     if(channel->listen_fd >= 0)
     {
       socketclose(channel->listen_fd);
       channel->listen_fd = -1;
     }
-    if(channel->remote_fd >= 0)
-    {
-      socketclose(channel->remote_fd);
-      channel->remote_fd = -1;
-    }
+
     if(channel->buffer)
     {
       free_buffer(channel->buffer);
@@ -320,13 +241,17 @@ void free_data_channel(data_channel_t *channel)
   }
 }
 
+/*
+ * Queue a null-terminated buffer to be sent to the client's data
+ * connection. Returns 0 on success, -1 on failure.
+ */
 int dtp_send_buffer(data_channel_t *channel, char *buffer)
 {
-  if(channel->local.fd == -1)
-  {
-    channel->local.buffer = buffer;
-    channel->state |= (DTP_LOCAL_BUF | DTP_XMIT);
-    return 0;
+  if(channel->local == NULL) {
+    channel->local = new_xfer_buffer(buffer);
+    channel->state |= DTP_XMIT;
+
+    return (channel->local == NULL) ? -1 : 0;
   }
 
   return -1;
@@ -334,12 +259,10 @@ int dtp_send_buffer(data_channel_t *channel, char *buffer)
 
 int dtp_send_file(data_channel_t *channel, int fd)
 {
-  if(channel->local.fd == -1)
-  {
-    channel->local.fd = fd;
-    channel->state &= ~DTP_LOCAL_BUF;
+  if(channel->local == NULL) {
+    channel->local = new_xfer_fd(fd);
     channel->state |= DTP_XMIT;
-    return 0;
+    return (channel->local == NULL) ? -1 : 0;
   }
 
   return -1;

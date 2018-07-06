@@ -28,7 +28,7 @@ static void pasv_accept_handler(int fd, struct sockaddr_in *sockaddr, socklen_t 
   network_close(pasv->listen_fd);
   pasv->listen_fd = -1;
 
-  pasv->remote_fd = fd;
+  pasv->remote = new_xfer_socket(fd);
   SET_STATE(pasv, DTP_ESTABLISHED);
 }
 

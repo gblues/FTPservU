@@ -3,6 +3,7 @@
 
 #include "ftpservu_types.h"
 #include "wiiu/types.h"
+#include "xfer.h"
 
 #define DTP_PENDING       0 // result of either a PORT or PASV command
 #define DTP_ESTABLISHED   1 // TCP/IP connection has been established
@@ -16,19 +17,15 @@
 #define DTP_FREE          6 // references are cleaned up; ready to free
 #define DTP_RECV       0x20 // channel is receiving from remote
 #define DTP_XMIT       0x40 // channel is sending data to remote
-#define DTP_LOCAL_BUF  0x80 // local is a buffer, not a file
 
-#define GET_STATE(dtp) (dtp->state & 0x0F)
-#define SET_STATE(dtp, flag) ((dtp)->state = ((dtp)->state & DTP_LOCAL_BUF) | flag)
+#define GET_STATE(dtp) (dtp->state & 0x0f)
+#define SET_STATE(dtp, flag) ((dtp)->state = ((dtp)->state & 0xf0) | flag)
 
 struct data_channel {
   data_channel_t *next;
   u8 state;
-  union {
-    int fd;
-    char *buffer;
-  } local;
-  int remote_fd;
+  xfer_t *local;
+  xfer_t *remote;
   int listen_fd;
   u32 ip;
   u16 port;
