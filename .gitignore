@@ -3,3 +3,5 @@
 *.rpx
 *.swp
 *.last
+*.o
+/src/wut/elf2rpl/elf2rpl

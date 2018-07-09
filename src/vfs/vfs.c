@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 #include <dirent.h>
+#include <sys/stat.h>
 
 #include "vfs.h"
 
